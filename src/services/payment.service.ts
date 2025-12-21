@@ -29,7 +29,20 @@ export class PaymentService {
     const pi = await prisma.paymentIntent.update({ where: { id }, data: { status: 'succeeded', metaJson: providerEvent } });
     // create Payment record referenced against proforma as verified
     if (pi.proformaId && pi.amount) {
-      const p = await prisma.payment.create({ data: { tenantId: pi.tenantId, ref: `intent_${pi.id}`, proformaId: pi.proformaId, buyerId: pi.buyerId, method: pi.provider ?? 'unknown', currency: pi.currency ?? 'USD', amount: pi.amount as any, status: 'verified', receivedAt: new Date(), hash: crypto.createHash('sha256').update(id).digest('hex') } });
+      const p = await prisma.payment.create({ data: {
+        id: crypto.randomBytes(16).toString('hex'),
+        tenant: { connect: { id: pi.tenantId } },
+        ref: `intent_${pi.id}`,
+        proformaId: pi.proformaId,
+        buyerId: pi.buyerId,
+        method: pi.provider ?? 'unknown',
+        currency: pi.currency ?? 'USD',
+        amount: pi.amount as any,
+        status: 'verified',
+        receivedAt: new Date(),
+        updatedAt: new Date(),
+        hash: crypto.createHash('sha256').update(id).digest('hex')
+      } });
       // update proforma status
       const pf = await prisma.proformaInvoice.findUnique({ where: { id: pi.proformaId } });
       if (pf) {

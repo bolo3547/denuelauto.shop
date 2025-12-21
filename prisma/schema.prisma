@@ -945,7 +945,7 @@ model partcategory {
 }
 
 model payment {
-  id              String           @id
+  id              String           @id @default(uuid())
   tenantId        String
   ref             String           @unique(map: "Payment_ref_key")
   carId           String?
@@ -960,7 +960,7 @@ model payment {
   receivedAt      DateTime?
   hash            String?
   createdAt       DateTime         @default(now())
-  updatedAt       DateTime
+  updatedAt       DateTime         @updatedAt
   agents          agents?          @relation(fields: [agentId], references: [id], map: "Payment_agentId_fkey")
   buyers          buyers?          @relation(fields: [buyerId], references: [id], map: "Payment_buyerId_fkey")
   car             car?             @relation(fields: [carId], references: [id], map: "Payment_carId_fkey")
@@ -977,7 +977,7 @@ model payment {
 }
 
 model paymentintent {
-  id              String           @id
+  id              String           @id @default(uuid())
   tenantId        String
   buyerId         String?
   proformaId      String?
@@ -989,7 +989,7 @@ model paymentintent {
   providerMeta    Json?
   metaJson        Json?
   createdAt       DateTime         @default(now())
-  updatedAt       DateTime
+  updatedAt       DateTime         @updatedAt
   buyers          buyers?          @relation(fields: [buyerId], references: [id], map: "PaymentIntent_buyerId_fkey")
   proformainvoice proformainvoice? @relation(fields: [proformaId], references: [id], map: "PaymentIntent_proformaId_fkey")
   tenant          tenant           @relation(fields: [tenantId], references: [id], map: "PaymentIntent_tenantId_fkey")
