@@ -104,3 +104,7 @@ app/_api_disabled/
 *.avi
 *.mkv
 *.wmv
+
+
+server.js
+webstat/
