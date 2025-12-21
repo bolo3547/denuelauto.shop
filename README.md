@@ -210,3 +210,24 @@ Create `.env` from `.env.example` with these required values:
 
 > **Security**: Never commit `.env` files. Use environment variables or secrets management in production.
 
+---
+
+## Publishing frontend to GitHub Pages (static export)
+
+You can publish a static export of the Next.js frontend to **GitHub Pages** (good for a static marketing site or public catalog without SSR/API requirements).
+
+Key points:
+- This repository includes a workflow at `.github/workflows/deploy-gh-pages.yml` that runs on pushes to `main`. It:
+  1. Installs dependencies in `frontend`
+  2. Runs `npm run export` (this writes the static site to `frontend/out`)
+  3. Publishes `frontend/out` to GitHub Pages
+
+- To enable Pages: go to your repository Settings → Pages → Deployment and confirm it uses "GitHub Actions" (the workflow will publish the site automatically).
+- If your frontend calls the backend, set `NEXT_PUBLIC_API_BASE_URL` in the GitHub Pages environment via a client-side config (or host the backend and set the environment variable on the server where applicable).
+- For a custom domain, add it in Settings → Pages and update your DNS records (add A or ALIAS/CNAME as instructed by GitHub). Save the domain in the Pages settings.
+
+If you want, I can also:
+- Set up a workflow that builds both frontend and backend and deploys the backend to another host (Render/Heroku) on push.
+- Add a simple README badge with the Pages URL after the first successful deployment.
+
+
