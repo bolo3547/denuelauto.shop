@@ -1,0 +1,311 @@
+// Missing models to add to main schema.prisma
+
+// USSD & Mobile Money Models
+model UssdSession {
+  id        String   @id @default(uuid())
+  sessionId String   @unique
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  msisdn    String
+  step      String
+  data      Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("ussd_sessions")
+}
+
+model UssdCart {
+  id             String    @id @default(uuid())
+  tenantId       String
+  tenant         Tenant    @relation(fields: [tenantId], references: [id])
+  msisdn         String
+  stockNo        String
+  status         String    @default("held") // "held", "converted", "expired"
+  holdExpiresAt  DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  
+  @@index([tenantId, stockNo])
+  @@index([holdExpiresAt])
+  @@map("ussd_carts")
+}
+
+model UssdChannel {
+  id        String @id @default(uuid())
+  tenantId  String
+  tenant    Tenant @relation(fields: [tenantId], references: [id])
+  shortcode String
+  name      String
+  isActive  Boolean @default(true)
+  
+  @@index([shortcode])
+  @@map("ussd_channels")
+}
+
+model MobilePayment {
+  id        String   @id @default(uuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  msisdn    String
+  provider  String   // "mtn", "airtel"
+  requestId String   @unique
+  amount    Decimal  @db.Decimal(10, 2)
+  currency  String   @default("ZMW")
+  status    String   @default("pending") // "pending", "approved", "failed"
+  metaJson  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([requestId])
+  @@index([status])
+  @@map("mobile_payments")
+}
+
+// Authentication & Admin Models
+model OneTimeCode {
+  id        String   @id @default(uuid())
+  contact   String   // email or phone
+  code      String
+  type      String   // "login", "reset", "verify"
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  
+  @@index([contact])
+  @@index([expiresAt])
+  @@map("one_time_codes")
+}
+
+model AdminUser {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  fullName     String
+  role         String   // "SUPER_ADMIN", "ADMIN", "SUPPORT"
+  isActive     Boolean  @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@map("admin_users")
+}
+
+// Merchant & Partner Models
+model Merchant {
+  id                String   @id @default(uuid())
+  tenantId          String
+  tenant            Tenant   @relation(fields: [tenantId], references: [id])
+  businessName      String
+  contactEmail      String
+  contactPhone      String?
+  businessAddress   String?
+  taxId             String?
+  bankDetails       Json?
+  commissionPercent Decimal  @db.Decimal(5, 2) @default(5.0)
+  status            String   @default("active") // "active", "suspended", "pending"
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@map("merchants")
+}
+
+// Orders Model (referenced as 'orders' not 'order')
+model Order {
+  id          String   @id @default(uuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  ref         String   @unique
+  msisdn      String?
+  buyerId     String?
+  buyer       Buyer?   @relation(fields: [buyerId], references: [id])
+  proformaId  String?
+  proforma    ProformaInvoice? @relation(fields: [proformaId], references: [id])
+  status      String   @default("part_paid")
+  totalAmount Decimal? @db.Decimal(10, 2)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([ref])
+  @@index([tenantId, msisdn])
+  @@map("orders")
+}
+
+// Payment Provider & Gateway Models
+model PaymentProvider {
+  id           String   @id @default(uuid())
+  tenantId     String   @unique
+  tenant       Tenant   @relation(fields: [tenantId], references: [id])
+  providerJson Json     // stores API keys and config for different providers
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@map("payment_providers")
+}
+
+model WebhookEvent {
+  id        String   @id @default(uuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  provider  String
+  eventId   String   @unique
+  signature String?
+  payload   Json
+  processed Boolean  @default(false)
+  createdAt DateTime @default(now())
+  
+  @@index([eventId])
+  @@index([provider])
+  @@map("webhook_events")
+}
+
+// Receipt & Communication Models
+model Receipt {
+  id          String   @id @default(uuid())
+  paymentId   String
+  payment     Payment  @relation(fields: [paymentId], references: [id])
+  message     String
+  channel     String   // "sms", "whatsapp", "email"
+  deliveredAt DateTime
+  createdAt   DateTime @default(now())
+  
+  @@index([paymentId])
+  @@map("receipts")
+}
+
+// Billing & Entitlements Models
+model BillingEntitlement {
+  id          String   @id @default(uuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  modulesJson Json     // { modules: ["auto_export", "inventory_sync"], limits: {...} }
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("billing_entitlements")
+}
+
+model UsageMeter {
+  id          String    @id @default(uuid())
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+  meterKey    String    // "api_calls", "sms_sent", "exports"
+  windowStart DateTime
+  windowEnd   DateTime
+  quantity    Int       @default(0)
+  createdAt   DateTime  @default(now())
+  
+  @@index([tenantId, meterKey])
+  @@index([windowStart, windowEnd])
+  @@map("usage_meters")
+}
+
+// Loyalty System Models
+model LoyaltyAccount {
+  id        String         @id @default(uuid())
+  tenantId  String
+  tenant    Tenant         @relation(fields: [tenantId], references: [id])
+  buyerId   String
+  buyer     Buyer          @relation(fields: [buyerId], references: [id])
+  points    Int            @default(0)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  events    LoyaltyEvent[]
+  
+  @@unique([tenantId, buyerId])
+  @@map("loyalty_accounts")
+}
+
+model LoyaltyEvent {
+  id              String         @id @default(uuid())
+  tenantId        String
+  tenant          Tenant         @relation(fields: [tenantId], references: [id])
+  buyerId         String
+  buyer           Buyer          @relation(fields: [buyerId], references: [id])
+  loyaltyAccount  LoyaltyAccount @relation(fields: [tenantId, buyerId], references: [tenantId, buyerId])
+  type            String         // "earn", "redeem"
+  points          Int
+  refType         String?        // "payment", "redeem", "bonus"
+  refId           String?
+  createdAt       DateTime       @default(now())
+  
+  @@index([tenantId, buyerId])
+  @@map("loyalty_events")
+}
+
+// Warranty Models
+model WarrantySelection {
+  id             String          @id @default(uuid())
+  tenantId       String
+  tenant         Tenant          @relation(fields: [tenantId], references: [id])
+  proformaId     String
+  proforma       ProformaInvoice @relation(fields: [proformaId], references: [id])
+  selected       Boolean         @default(false)
+  addedAmountUsd Decimal         @db.Decimal(10, 2) @default(0)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  
+  @@unique([tenantId, proformaId])
+  @@map("warranty_selections")
+}
+
+// Export Models
+model ExportPort {
+  id         String            @id @default(uuid())
+  tenantId   String
+  tenant     Tenant            @relation(fields: [tenantId], references: [id])
+  name       String
+  country    String
+  isActive   Boolean           @default(true)
+  priceRules ExportPriceRule[]
+  createdAt  DateTime          @default(now())
+  
+  @@map("export_ports")
+}
+
+model ExportPriceRule {
+  id               String     @id @default(uuid())
+  tenantId         String
+  tenant           Tenant     @relation(fields: [tenantId], references: [id])
+  portId           String
+  port             ExportPort @relation(fields: [portId], references: [id])
+  baseUsd          Decimal    @db.Decimal(10, 2)
+  freightUsd       Decimal    @db.Decimal(10, 2)
+  insuranceRatePct Decimal    @db.Decimal(5, 2)
+  createdAt        DateTime   @default(now())
+  
+  @@map("export_price_rules")
+}
+
+// Add missing fields to existing models (these would be additions to existing models)
+// PaymentIntent updates needed:
+// - proformaId: String
+// - amount: Decimal
+// - provider: String
+// - currency: String
+// - status: String
+// - metaJson: Json?
+
+// Payment updates needed:
+// - ref: String
+// - proformaId: String
+
+// TestDrive updates needed:
+// - email: String?
+
+// Agent updates needed:
+// - userId: String
+// - agentCode: String
+
+// Buyer updates needed:
+// - firstName: String
+// - lastName: String
+// - passwordHash: String
+
+// ProformaInvoice updates needed:
+// - proformaNo: String (instead of 'number')
+// - total: Decimal
+// - lineItemsJson: Json?
+
+// Car updates needed:
+// - shortCode: String?

@@ -1,0 +1,328 @@
+// Additive Prisma schema snippets for Denuel Auto
+
+model Tenant {
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  name          String
+  theme         TenantTheme?
+  settings      TenantSettings?
+  subscription  TenantSubscription?
+  stocks        Stock[]
+  leads         Lead[]
+  staff         Staff[]
+  agents        Agent[]
+  invoices      Invoice[]
+  paymentProofs PaymentProof[]
+  notifications TenantNotification[]
+  exportJobs    ExportJob[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
+}
+
+model TenantTheme {
+  id        String  @id @default(cuid())
+  tenantId  String  @unique
+  tenant    Tenant  @relation(fields: [tenantId], references: [id])
+  preset    String?
+  primary   String
+  secondary String
+  accent    String
+  background String
+  text      String
+  logoUrl   String?
+  updatedAt DateTime @updatedAt
+}
+
+model TenantSettings {
+  id        String  @id @default(cuid())
+  tenantId  String  @unique
+  tenant    Tenant  @relation(fields: [tenantId], references: [id])
+  supportPhones String
+  payoutPrimaryWallet String
+  updatedAt DateTime @updatedAt
+}
+
+model TenantPlan {
+  id    String @id @default(cuid())
+  code  String @unique
+  name  String
+  priceMinor Int
+}
+
+model TenantSubscription {
+  id        String  @id @default(cuid())
+  tenantId  String  @unique
+  tenant    Tenant  @relation(fields: [tenantId], references: [id])
+  planCode  String
+  active    Boolean @default(true)
+  expiresAt DateTime
+}
+
+model Stock {
+  id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  stockNo    String
+  title      String
+  priceMinor Int
+  coverUrl   String?
+  images     StockImage[]
+  videos     StockVideo[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([tenantId, stockNo])
+  @@unique([tenantId, stockNo])
+}
+
+model StockImage {
+  id       String @id @default(cuid())
+  tenantId String
+  stockId  String
+  url      String
+  stock    Stock  @relation(fields: [stockId], references: [id])
+}
+
+model StockVideo {
+  id       String @id @default(cuid())
+  tenantId String
+  stockId  String
+  url      String
+  stock    Stock  @relation(fields: [stockId], references: [id])
+}
+
+model ShippingRate {
+  id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  destination String
+  port        String
+  rateMinor   Int
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId, destination, port])
+}
+
+model CifOverride {
+  id        String @id @default(cuid())
+  tenantId  String
+  stockId   String
+  cifMinor  Int
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, stockId])
+}
+
+model Lead {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  source      String
+  status      String
+  assignedAgentId String?
+  name        String?
+  email       String?
+  phone       String?
+  message     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  histories   LeadHistory[]
+
+  @@index([tenantId, status])
+}
+
+model LeadHistory {
+  id        String   @id @default(cuid())
+  tenantId  String
+  leadId    String
+  actorType String
+  actorId   String?
+  note      String?
+  createdAt DateTime @default(now())
+}
+
+model InquiryAttachment {
+  id       String @id @default(cuid())
+  tenantId String
+  leadId   String
+  url      String
+}
+
+model Agent {
+  id       String @id @default(cuid())
+  tenantId String
+  email    String
+  name     String
+  passwordHash String
+  active   Boolean @default(true)
+
+  @@unique([tenantId, email])
+}
+
+model AgentActivityLog {
+  id                String  @id @default(cuid())
+  tenantId          String
+  agentId           String
+  clientGeneratedId String
+  canonicalId       String?
+  type              String
+  payload           Json
+  createdAt         DateTime @default(now())
+
+  @@unique([tenantId, clientGeneratedId])
+}
+
+model Commission {
+  id       String @id @default(cuid())
+  tenantId String
+  agentId  String
+  leadId   String?
+  amountMinor Int
+  status   String
+}
+
+model Staff {
+  id       String @id @default(cuid())
+  tenantId String
+  email    String
+  name     String
+  role     String
+  passwordHash String
+  twofaSecret String?
+  active   Boolean @default(true)
+
+  @@unique([tenantId, email])
+}
+
+model Buyer {
+  id       String @id @default(cuid())
+  tenantId String
+  email    String
+  name     String
+
+  @@unique([tenantId, email])
+}
+
+model Favorite {
+  id       String @id @default(cuid())
+  tenantId String
+  buyerId  String
+  stockId  String
+}
+
+model Order {
+  id       String @id @default(cuid())
+  tenantId String
+  buyerId  String
+  status   String
+  totalMinor Int
+}
+
+model Invoice {
+  id         String @id @default(cuid())
+  tenantId   String?
+  buyerId    String?
+  currency   String
+  totalMinor Int
+  paid       Boolean @default(false)
+  externalRef String? @unique
+  lines      InvoiceLine[]
+
+  @@index([tenantId, paid])
+}
+
+model InvoiceLine {
+  id         String @id @default(cuid())
+  invoiceId  String
+  description String
+  quantity   Int
+  unitMinor  Int
+}
+
+model Transaction {
+  id         String @id @default(cuid())
+  tenantId   String?
+  invoiceId  String
+  method     String
+  amountMinor Int
+  status     String
+  meta       Json
+}
+
+model PaymentProof {
+  id       String @id @default(cuid())
+  tenantId String?
+  invoiceId String
+  status   String
+  fileUrl  String
+  method   String
+  submittedByUserId String?
+  meta     Json
+  createdAt DateTime @default(now())
+}
+
+model PayoutMobileWallet {
+  id        String @id @default(cuid())
+  tenantId  String?
+  network   String
+  msisdn    String
+  primary   Boolean @default(false)
+}
+
+model PromotionBanner {
+  id       String @id @default(cuid())
+  tenantId String
+  title    String
+  imageUrl String?
+  active   Boolean @default(true)
+}
+
+model PromotionRule {
+  id       String @id @default(cuid())
+  tenantId String
+  code     String
+  percent  Int
+  active   Boolean @default(true)
+
+  @@unique([tenantId, code])
+}
+
+model TenantNotification {
+  id       String @id @default(cuid())
+  tenantId String
+  type     String
+  payload  Json
+  createdAt DateTime @default(now())
+}
+
+model HqNotification {
+  id       String @id @default(cuid())
+  type     String
+  payload  Json
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id         String @id @default(cuid())
+  tenantId   String?
+  action     String
+  entityType String?
+  entityId   String?
+  actorUserId String?
+  createdAt  DateTime @default(now())
+
+  @@index([tenantId, action])
+}
+
+model ExportJob {
+  id        String @id @default(cuid())
+  tenantId  String
+  resource  String
+  status    String
+  downloadUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId, status])
+}

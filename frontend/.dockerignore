@@ -1,0 +1,8 @@
+node_modules
+.next
+public/uploads
+.env.local
+.env.*
+Dockerfile
+.git
+*.log

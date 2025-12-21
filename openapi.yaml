@@ -1,0 +1,292 @@
+openapi: 3.0.0
+info:
+  title: Denuel Car Dealership API
+  version: 0.1.0
+servers:
+  - url: /api
+paths:
+  /auth/login:
+    post:
+      summary: Login and receive JWT
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: OK
+  /cars:
+    get:
+      summary: List cars for tenant (auth required)
+      responses:
+        '200':
+          description: A list of cars
+  /t/{slug}/public/cars:
+    get:
+      summary: Public catalog listing for tenant
+      parameters:
+        - name: slug
+          in: path
+          required: true
+      responses:
+        '200':
+          description: Public car list
+  /t/{slug}/public/cars/{idOrStock}:
+    get:
+      summary: Public car detail
+      parameters:
+        - name: slug
+          in: path
+          required: true
+        - name: idOrStock
+          in: path
+          required: true
+      responses:
+        '200':
+          description: Car details
+  /print/{template}/{id}:
+    get:
+      summary: Render a document template (HTML or PDF)
+      parameters:
+        - name: template
+          in: path
+          required: true
+        - name: id
+          in: path
+          required: true
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [html, pdf]
+      responses:
+        '200':
+          description: Rendered document (HTML or PDF)
+  /agent-deals:
+    get:
+      summary: List agent deals
+      responses:
+        '200':
+          description: A list of agent deals
+    post:
+      summary: Create an agent deal
+      responses:
+        '201':
+          description: Created
+  /agent-deals/{id}:
+    patch:
+      summary: Update an agent deal (stage / commission)
+      parameters:
+        - name: id
+          in: path
+          required: true
+      responses:
+        '200':
+          description: Updated
+  /trade-ins:
+    get:
+      summary: List trade-in requests
+      responses:
+        '200':
+          description: A list of trade-ins
+    post:
+      summary: Create a trade-in
+      responses:
+        '201':
+          description: Created
+  /trade-ins/{id}:
+    patch:
+      summary: Update trade-in status
+      parameters:
+        - name: id
+          in: path
+          required: true
+      responses:
+        '200':
+          description: Updated trade-in
+  /test-drives:
+    post:
+      summary: Schedule a test drive
+      responses:
+        '201':
+          description: Created
+    get:
+      summary: List test drives
+      responses:
+        '200':
+          description: List of scheduled test drives
+  /test-drives/{id}:
+    patch:
+      summary: Update a test drive status
+      parameters:
+        - name: id
+          in: path
+          required: true
+      responses:
+        '200':
+          description: Updated test drive
+  /buyer/cars/{id}/hold:
+    post:
+      summary: Create a hold for a car
+      parameters:
+        - name: id
+          in: path
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                hours: { type: number }
+                amountUsd: { type: number }
+      responses:
+        '201':
+          description: Hold created
+  /buyer/proformas/{id}/escrow/intent:
+    post:
+      summary: Create an escrow payment intent
+      parameters:
+        - name: id
+          in: path
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                provider: { type: string }
+                amountUsd: { type: number }
+      responses:
+        '201':
+          description: Escrow intent created
+  /buyer/proformas/{id}/escrow/release:
+    post:
+      summary: Release escrow (accountant step-up)
+      parameters:
+        - name: id
+          in: path
+          required: true
+      responses:
+        '200':
+          description: Released
+  /public/reviews:
+    get:
+      summary: Get public approved reviews
+      responses:
+        '200':
+          description: List of reviews
+  /buyer/reviews:
+    post:
+      summary: Create review (buyer)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                carId: { type: string }
+                rating: { type: integer }
+                text: { type: string }
+      responses:
+        '201':
+          description: Created
+  /t/{slug}/public/attribution/agent:
+    get:
+      summary: Attribution: set agent referral cookie and record click
+      parameters:
+        - name: slug
+          in: path
+          required: true
+        - name: code
+          in: query
+          required: true
+      responses:
+        '204':
+          description: No Content
+    /t/{slug}/agent/auth/login:
+      post:
+        summary: Agent login
+        parameters:
+          - name: slug
+            in: path
+            required: true
+        requestBody:
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  email: { type: string }
+        responses:
+          '200':
+            description: Token returned
+    /t/{slug}/agent/me:
+      get:
+        summary: Agent - me
+        parameters:
+          - name: slug
+            in: path
+            required: true
+        responses:
+          '200':
+            description: Agent data
+    /t/{slug}/agent/metrics/overview:
+      get:
+        summary: Agent metrics overview for dashboard
+        parameters:
+          - name: slug
+            in: path
+            required: true
+        responses:
+          '200':
+            description: Agent metrics
+    /t/{slug}/agent/referral-link:
+      get:
+        summary: Get referral link for agent
+        parameters:
+          - name: slug
+            in: path
+            required: true
+        responses:
+          '200':
+            description: Agent referral link returned
+  /admin/fx-settings:
+    get:
+      summary: Get FX settings
+    put:
+      summary: Update FX settings
+      requestBody:
+        content:
+          application/json:
+            schema:
+               type: object
+               properties:
+                 usdToLocal: { type: number }
+                 minMarginPct: { type: number }
+      responses:
+        '200':
+          description: Updated
+  /buyer/favorites/{carId}:
+    post:
+      summary: Add car to buyer favorites
+      parameters:
+        - name: carId
+          in: path
+          required: true
+    delete:
+      summary: Remove car from buyer favorites
+      parameters:
+        - name: carId
+          in: path
+          required: true
+      responses:
+        '200':
+          description: Removed

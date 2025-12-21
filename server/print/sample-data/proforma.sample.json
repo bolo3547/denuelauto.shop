@@ -1,0 +1,16 @@
+{
+  "tenant":{"id":"t1","slug":"sample-dealer","name":"DENUEL Motors","logo_url":"https://cdn.example/logo.png",
+    "address":{"line1":"Plot 123, Cairo Rd","city":"Lusaka"},
+    "phone":"+260 97 000 0000","email":"sales@denuel.com",
+    "bank_instructions_html":"<p>Send USD to FNB Zambia, Acc: 123456, SWIFT: ABCD.</p>",
+    "theme":{"primary":"#0F3D91","accent":"#F4C430"}
+  },
+  "proforma":{"id":"pf1","number":"PF-2025-0012","issued_at":"2025-11-21T10:00:00Z","valid_until":"2025-11-28","status":"sent","currency":"USD","createdAt":"2025-11-21T10:00:00Z"},
+  "buyer":{"name":"John Buyer","email":"john@example.com","phone":"+255700000111","country":"Tanzania"},
+  "agent":{"name":"Asha Agent","email":"asha@agents.com","country":"Tanzania"},
+  "car":{"stock_no":"DJ-8891","vin":"JF1GD706X6L512345","make":"Toyota","model":"Harrier","grade":"Premium","year":2017,"engine_cc":2500,"mileage_km":86000,"transmission":"AT","steering":"RHD","color_ext":"Black","location_branch":"Lusaka"},
+  "port":{"name":"Dar es Salaam","country":"Tanzania"},
+  "pricing":{"fob":10500,"freight":900,"insurance":157.5,"other":[{"label":"Doc Fee","amount":50}]},
+  "totals":{"grand":11557},
+  "pay_qr_payload":"PF-2025-0012|USD|11557"
+}

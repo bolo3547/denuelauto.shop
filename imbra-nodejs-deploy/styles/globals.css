@@ -1,0 +1,128 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&family=Merriweather:wght@300;400;700&family=Nunito:wght@400;600;800&display=swap');
+@import './register.css';
+@import './enterprise-animations.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body {
+	padding: 0;
+	margin: 0;
+	font-family: 'Poppins', 'Inter', 'Roboto', 'Segoe UI', Arial, sans-serif;
+	background: #acb8e5;
+	color: #222;
+}
+
+*, *::before, *::after {
+	box-sizing: border-box;
+}
+
+a {
+	color: #0F3D91;
+	text-decoration: none;
+	transition: color 0.2s;
+}
+a:hover {
+	color: #FFD700;
+}
+
+button {
+	font-family: inherit;
+	cursor: pointer;
+}
+
+input, textarea, select {
+	font-family: inherit;
+	border-radius: 6px;
+	border: 1px solid #e3e6f3;
+	padding: 8px;
+	margin-top: 4px;
+}
+
+footer {
+	background: #fff;
+	color: #444;
+	border-top: 1px solid #e3e6f3;
+}
+
+:root{ --primary: #0F3D91; --accent: #F4C430; --text: #0B1021; --neutral: #F7F8FB; }
+:root.dark{ --bg: #0f1724; --card-border: rgba(255,255,255,0.06); }
+html, body, #__next{ height:100%; }
+body { background-color: #fff; color: #000; font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; }
+
+/* Utility to use tenant theme variables */
+.btn-primary{ background-color: var(--primary); color: white; }
+.btn-primary:hover{ filter: brightness(0.95); }
+.chip{ background-color: var(--neutral); color: var(--text); }
+.bg-card{ background: white; }
+.dark .bg-card{ background: #0f1724; }
+.border{ border: 1px solid rgba(15, 61, 145, 0.06); }
+
+/* Rounded style */
+.rounded-2xl{ border-radius: 1rem; }
+/* Small CTA shadow */
+.shadow-sm { box-shadow: 0 1px 2px rgba(11,16,33,0.04); }
+.shadow { box-shadow: 0 6px 18px rgba(11,16,33,0.08); }
+.hover\:shadow-md:hover{ box-shadow: 0 10px 24px rgba(11,16,33,0.08); }
+
+/* Tone classes */
+.tone-formal { font-family: 'Merriweather', serif; }
+.tone-professional { font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto; }
+.tone-friendly { font-family: 'Nunito', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto; }
+
+/* Tone visual tweaks */
+.tone-formal h1, .tone-formal h2, .tone-formal h3 { letter-spacing: -0.5px; }
+.tone-friendly button, .tone-friendly .btn-primary { border-radius: 9999px; }
+.tone-professional button, .tone-professional .btn-primary { border-radius: 8px; }
+
+/* Focus styles for keyboard users */
+:where(:focus-visible) { outline: none; }
+button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible {
+	outline: 3px solid rgba(15,61,145,0.2);
+	outline-offset: 3px;
+	box-shadow: 0 0 0 4px rgba(15,61,145,0.06);
+}
+
+/* Hide native scrollbar for horizontal logo scroller */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  /* scrollbar-width is not supported in Chrome <121, Safari, iOS Safari, Samsung Internet */
+  overflow: hidden; /* Fallback for unsupported browsers */
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Custom animations */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes gradient-x {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.6s ease-out;
+}
+
+.animate-gradient-x {
+  background-size: 200% 200%;
+  animation: gradient-x 8s ease infinite;
+}
+
+/* Hover animations */
+.hover\:scale-105:hover {
+  transform: scale(1.05);
+}
+
+.transition-all {
+  transition-property: all;
+  transition-duration: 200ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}

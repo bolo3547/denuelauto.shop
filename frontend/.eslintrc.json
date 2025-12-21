@@ -1,0 +1,46 @@
+{
+  "root": true,
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "ecmaVersion": 2024,
+    "sourceType": "module",
+    "ecmaFeatures": { "jsx": true }
+  },
+  "env": {
+    "browser": true,
+    "es2021": true,
+    "node": true
+  },
+  "plugins": [
+    "@typescript-eslint",
+    "react",
+    "react-hooks",
+    "jsx-a11y"
+  ],
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended",
+    "plugin:react/recommended",
+    "plugin:react-hooks/recommended",
+    "plugin:jsx-a11y/recommended"
+  ],
+  "settings": {
+    "react": { "version": "detect" }
+  },
+  "rules": {
+    "react/react-in-jsx-scope": "off",
+    "jsx-a11y/anchor-is-valid": "warn",
+    "jsx-a11y/no-noninteractive-element-interactions": "off"
+    ,
+    "no-restricted-imports": [
+      "error",
+      {
+        "paths": [
+          { "name": "@prisma/client", "message": "Prisma is not allowed in the frontend; move DB access to the backend." },
+          { "name": "@/lib/prisma", "message": "Do not import server Prisma client in frontend." }
+        ],
+        "patterns": ["../lib/prisma", "**/app/api/**", "**/pages/api/**"]
+      }
+    ]
+  }
+}

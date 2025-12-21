@@ -1,0 +1,20 @@
+/* Tenant CSS variables snippet - add to your global styles
+
+To use: import './styles/tenant.css' in your global CSS or page to ensure CSS vars are available.
+
+This aligns with the BE FORWARD palette defaults.
+*/
+:root {
+  --primary: #000000;
+  --accent: #ff7a00;
+  --surface: #ffffff;
+  --text: #0f172a;
+}
+
+/* Example theme class that can be toggled per tenant */
+.tenant-theme-beforward {
+  --primary: #000000;
+  --accent: #ff7a00;
+  --surface: #ffffff;
+  --text: #0f172a;
+}

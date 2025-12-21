@@ -1,0 +1,7 @@
+{
+  "tenant":{"id":"t1","slug":"sample-dealer","name":"DENUEL Motors","logo_url":"https://cdn.example/logo.png","address":{"line1":"Plot 123, Cairo Rd","city":"Lusaka"},"phone":"+260 97 000 0000","email":"sales@denuel.com"},
+  "invoice":{"id":"inv1","number":"INV-2025-0001","issued_at":"2025-11-23T09:00:00Z","status":"paid","currency":"USD","total":11557,"lines":[{"label":"Car","amount":10000},{"label":"Freight","amount":900},{"label":"Insurance","amount":157.5},{"label":"Doc Fee","amount":50}]},
+  "buyer":{"name":"John Buyer","email":"john@example.com","phone":"+255700000111","country":"Tanzania"},
+  "shipment":{"ship_method":"RORO","etd":"2025-11-25","eta":"2025-12-10","tracking_no":"TRACK123"},
+  "car":{"stock_no":"DJ-8891","vin":"JF1GD706X6L512345","make":"Toyota","model":"Harrier","grade":"Premium","year":2017}
+}

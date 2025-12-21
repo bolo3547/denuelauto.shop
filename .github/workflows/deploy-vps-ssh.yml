@@ -1,0 +1,62 @@
+name: Deploy to VPS (SSH)
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+
+      - name: Build backend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Archive deployment
+        run: |
+          tar -czf denuel-deploy.tar.gz . --exclude='./node_modules' --exclude='./frontend/node_modules' --exclude='./.git'
+
+      - name: Deploy to VPS via SSH
+        uses: appleboy/ssh-action@v0.1.7
+        env:
+          IMAGE_BACKEND: ${{ secrets.IMAGE_BACKEND }}
+          IMAGE_FRONTEND: ${{ secrets.IMAGE_FRONTEND }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_SSH_PORT }}
+          env: |
+            IMAGE_BACKEND=${{ secrets.IMAGE_BACKEND }}
+            IMAGE_FRONTEND=${{ secrets.IMAGE_FRONTEND }}
+          script: |
+            set -e
+            mkdir -p ~/deploy/denuel_auto
+            tar -xzf denuel-deploy.tar.gz -C ~/deploy/denuel_auto
+            cd ~/deploy/denuel_auto
+            # Update .env.production with provided image overrides
+            if [ -n "${IMAGE_BACKEND}" ]; then
+              echo "IMAGE_BACKEND=${IMAGE_BACKEND}" >> .env.production
+            fi
+            if [ -n "${IMAGE_FRONTEND}" ]; then
+              echo "IMAGE_FRONTEND=${IMAGE_FRONTEND}" >> .env.production
+            fi
+            docker compose -f docker-compose.prod.yml pull || true
+            docker compose -f docker-compose.prod.yml up -d --build
+            docker compose -f docker-compose.prod.yml exec -T backend bash -lc "npx prisma migrate deploy || true"

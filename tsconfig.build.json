@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "."
+  },
+  "include": [
+    "src/min-server.ts",
+    "src/routes/buyer.checkout.ts",
+    "src/services/payment.service.ts",
+    "src/services/warranty.service.ts",
+    "src/services/loyalty.service.ts",
+    "src/middleware/auth.ts",
+    "src/middleware/permissions.ts",
+    "src/types/**/*.ts",
+    "types/**/*.d.ts"
+  ],
+  "exclude": ["tests", "prisma", "scripts", "e2e", "src/app.ts", "src/server.ts", "src/routes/**/*", "!src/routes/buyer.checkout.ts", "src/print/**/*", "src/jobs/**/*", "src/middleware/hostTenant.ts"]
+}

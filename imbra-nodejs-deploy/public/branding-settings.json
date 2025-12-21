@@ -1,0 +1,43 @@
+{
+  "branding": {
+    "siteName": "Denuel Auto",
+    "tagline": "Your Trusted Car Dealership Partner",
+    "logoUrl": "",
+    "logoLightUrl": "",
+    "logoDarkUrl": "",
+    "faviconUrl": "",
+    "primaryColor": "#1E40AF",
+    "secondaryColor": "#FFD700",
+    "heroTitle": "The Operating System for Modern Car Dealerships",
+    "heroSubtitle": "Denuel Auto combines inventory, sales, finance, HR, and marketing into one platform. Collect payments (Airtel/MTN), automate approvals, and give every branch a single source of truth."
+  },
+  "reviews": [
+    {
+      "id": "1",
+      "name": "Linda K.",
+      "role": "GM, Multi-branch dealer",
+      "quote": "We cut onboarding time in half and finally see live stock across all yards.",
+      "rating": 5,
+      "avatarUrl": "",
+      "isActive": true
+    },
+    {
+      "id": "2",
+      "name": "Tapiwa M.",
+      "role": "Sales Director",
+      "quote": "Agents close faster with MoMo receipts and approval flows baked in.",
+      "rating": 5,
+      "avatarUrl": "",
+      "isActive": true
+    },
+    {
+      "id": "3",
+      "name": "Aisha N.",
+      "role": "Head of Finance",
+      "quote": "Commission and payout tracking is now automatic—no more spreadsheets.",
+      "rating": 5,
+      "avatarUrl": "",
+      "isActive": true
+    }
+  ]
+}

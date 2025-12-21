@@ -1,0 +1,6 @@
+:root{ --blue:#0F3D91; --gold:#F4C430; }
+body{ font-family: Arial, Helvetica, sans-serif; color:#222; }
+.header{ display:flex; align-items:center; gap:16px; }
+.content{ margin: 20px 0; }
+.footer{ font-size: 10px; color:#666; margin-top:20px; }
+.draft{ position:absolute; opacity:0.12; font-size: 120px; top:25%; left:8%; color:var(--blue) }

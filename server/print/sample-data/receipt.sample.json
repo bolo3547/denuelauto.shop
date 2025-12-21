@@ -1,0 +1,5 @@
+{
+  "tenant":{"id":"t1","slug":"sample-dealer","name":"DENUEL Motors","logo_url":"https://cdn.example/logo.png","address":{"line1":"Plot 123, Cairo Rd","city":"Lusaka"},"phone":"+260 97 000 0000","email":"sales@denuel.com"},
+  "payment":{"id":"pay1","ref":"PAY-001","received_at":"2025-11-22T12:00:00Z","status":"verified","method":"bank","currency":"USD","amount":11557,"desc":"Payment for PROFORMA PF-2025-0012"},
+  "payer":{"name":"John Buyer","email":"john@example.com","phone":"+255700000111"}
+}

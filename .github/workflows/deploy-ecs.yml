@@ -1,0 +1,170 @@
+name: Build & Deploy to AWS ECR/ECS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build and Push Backend Image
+        run: |
+          IMAGE_NAME=${{ secrets.ECR_REPO_BACKEND }}
+          IMAGE_TAG=${GITHUB_SHA::8}
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          REGION=${{ secrets.AWS_REGION }}
+          docker build -f Dockerfile -t ${IMAGE_NAME}:${IMAGE_TAG} .
+          docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${IMAGE_NAME}:${IMAGE_TAG}
+          docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${IMAGE_NAME}:latest
+          aws ecr create-repository --repository-name ${IMAGE_NAME} || true
+          docker push ${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${IMAGE_NAME}:${IMAGE_TAG}
+          docker push ${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${IMAGE_NAME}:latest
+
+      - name: Optionally Push Backend Image to DockerHub
+        if: ${{ secrets.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != '' }}
+        run: |
+          docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
+          docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${{ secrets.DOCKERHUB_USERNAME }}/denuel-auto-backend:${IMAGE_TAG}
+          docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${{ secrets.DOCKERHUB_USERNAME }}/denuel-auto-backend:latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/denuel-auto-backend:${IMAGE_TAG}
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/denuel-auto-backend:latest
+
+      - name: Build and Push Frontend Image
+        run: |
+          cd frontend
+          IMAGE_NAME=${{ secrets.ECR_REPO_FRONTEND }}
+          IMAGE_TAG=${GITHUB_SHA::8}
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          REGION=${{ secrets.AWS_REGION }}
+          docker build -f Dockerfile -t ${IMAGE_NAME}:${IMAGE_TAG} .
+          docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${IMAGE_NAME}:${IMAGE_TAG}
+          docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${IMAGE_NAME}:latest
+          aws ecr create-repository --repository-name ${IMAGE_NAME} || true
+          docker push ${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${IMAGE_NAME}:${IMAGE_TAG}
+          docker push ${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${IMAGE_NAME}:latest
+
+      - name: Optionally Push Frontend Image to DockerHub
+        if: ${{ secrets.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != '' }}
+        run: |
+          docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
+          docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${{ secrets.DOCKERHUB_USERNAME }}/denuel-auto-frontend:${IMAGE_TAG}
+          docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${{ secrets.DOCKERHUB_USERNAME }}/denuel-auto-frontend:latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/denuel-auto-frontend:${IMAGE_TAG}
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/denuel-auto-frontend:latest
+
+  deploy-to-ecs:
+    runs-on: ubuntu-latest
+    environment: production
+    needs: [build-and-push, deploy-to-staging]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: Deploy to ECS (force new deployment)
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          ECS_CLUSTER: ${{ secrets.ECS_CLUSTER_NAME }}
+          ECS_SERVICE: ${{ secrets.ECS_SERVICE_NAME }}
+          ECR_REPO_BACKEND: ${{ secrets.ECR_REPO_BACKEND }}
+          ECR_REPO_FRONTEND: ${{ secrets.ECR_REPO_FRONTEND }}
+          CONTAINER_BACKEND_NAME: ${{ secrets.CONTAINER_BACKEND_NAME }}
+          CONTAINER_FRONTEND_NAME: ${{ secrets.CONTAINER_FRONTEND_NAME }}
+        run: |
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          REGION=${AWS_REGION}
+          ECS_CLUSTER=${ECS_CLUSTER}
+          ECS_SERVICE=${ECS_SERVICE}
+          BACKEND_REPO=${ECR_REPO_BACKEND}
+          FRONTEND_REPO=${ECR_REPO_FRONTEND}
+          IMAGE_TAG=${GITHUB_SHA::8}
+          BACKEND_IMAGE=${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${BACKEND_REPO}:${IMAGE_TAG}
+          FRONTEND_IMAGE=${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${FRONTEND_REPO}:${IMAGE_TAG}
+
+          echo "Deploying images: ${BACKEND_IMAGE} & ${FRONTEND_IMAGE} to ECS cluster: ${ECS_CLUSTER}, service: ${ECS_SERVICE}"
+          # Ensure script is executable
+          chmod +x ./scripts/ecs-deploy.sh
+          ./scripts/ecs-deploy.sh ${ECS_CLUSTER} ${ECS_SERVICE} ${BACKEND_IMAGE} ${CONTAINER_BACKEND_NAME:-web} ${FRONTEND_IMAGE} ${CONTAINER_FRONTEND_NAME:-frontend}
+
+  deploy-to-staging:
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Build Image names
+        run: |
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          REGION=${{ secrets.AWS_REGION }}
+          IMAGE_TAG=${GITHUB_SHA::8}
+          BACKEND_IMAGE=${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${{ secrets.ECR_REPO_BACKEND }}:${IMAGE_TAG}
+          FRONTEND_IMAGE=${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${{ secrets.ECR_REPO_FRONTEND }}:${IMAGE_TAG}
+          echo "BACKEND_IMAGE=${BACKEND_IMAGE}" >> $GITHUB_ENV
+          echo "FRONTEND_IMAGE=${FRONTEND_IMAGE}" >> $GITHUB_ENV
+
+      - name: Deploy to Staging (ECS)
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          ECS_CLUSTER: ${{ secrets.STAGING_ECS_CLUSTER }}
+          ECS_SERVICE: ${{ secrets.STAGING_ECS_SERVICE }}
+          BACKEND_IMAGE: ${{ env.BACKEND_IMAGE }}
+          FRONTEND_IMAGE: ${{ env.FRONTEND_IMAGE }}
+          CONTAINER_BACKEND_NAME: ${{ secrets.CONTAINER_BACKEND_NAME }}
+          CONTAINER_FRONTEND_NAME: ${{ secrets.CONTAINER_FRONTEND_NAME }}
+        run: |
+          chmod +x ./scripts/ecs-deploy.sh
+          ./scripts/ecs-deploy.sh ${ECS_CLUSTER} ${ECS_SERVICE} ${BACKEND_IMAGE} ${CONTAINER_BACKEND_NAME:-web} ${FRONTEND_IMAGE} ${CONTAINER_FRONTEND_NAME:-frontend}
+
+      - name: Smoke test staging API
+        env:
+          STAGING_API_URL: ${{ secrets.STAGING_API_URL }}
+          STAGING_TENANT_SLUG: ${{ secrets.STAGING_TENANT_SLUG }}
+        run: |
+          chmod +x ./scripts/ecs-smoke-test.sh
+          ./scripts/ecs-smoke-test.sh ${STAGING_API_URL}/t/${STAGING_TENANT_SLUG}/public/stock totalCars
+
+      - name: Smoke test production API
+        env:
+          PROD_API_URL: ${{ secrets.PROD_API_URL }}
+          PROD_TENANT_SLUG: ${{ secrets.PROD_TENANT_SLUG }}
+        run: |
+          chmod +x ./scripts/ecs-smoke-test.sh
+          ./scripts/ecs-smoke-test.sh ${PROD_API_URL}/t/${PROD_TENANT_SLUG}/public/stock totalCars

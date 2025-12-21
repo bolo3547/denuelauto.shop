@@ -1,0 +1,61 @@
+---
+# Simple Ansible playbook stub for deploying denuel-api
+# This is a template and should be customized to your inventory and secrets management.
+
+- hosts: denuel
+  become: true
+  vars:
+    repo_url: 'https://github.com/your/repo.git'
+    deploy_path: /var/www/denuel
+    node_env: production
+
+  tasks:
+    - name: Ensure apt packages
+      apt:
+        name: ['nginx','git','build-essential','curl']
+        state: present
+        update_cache: yes
+
+    - name: Clone repository
+      git:
+        repo: "{{ repo_url }}"
+        dest: "{{ deploy_path }}"
+        version: main
+        force: yes
+      become_user: deploy
+
+    - name: Install Node deps (server)
+      npm:
+        path: "{{ deploy_path }}"
+        production: yes
+      become_user: deploy
+
+    - name: Copy nginx conf
+      template:
+        src: ../../infra/nginx/api.denuel-auto.com.conf
+        dest: /etc/nginx/sites-available/api.denuel-auto.com
+
+    - name: Enable site
+      file:
+        src: /etc/nginx/sites-available/api.denuel-auto.com
+        dest: /etc/nginx/sites-enabled/api.denuel-auto.com
+        state: link
+
+    - name: Reload nginx
+      service:
+        name: nginx
+        state: reloaded
+
+    - name: Ensure pm2 installed
+      npm:
+        name: pm2
+        global: yes
+
+    - name: Start PM2 ecosystem
+      command: pm2-runtime start {{ deploy_path }}/ecosystem.config.js --env production
+      args:
+        chdir: "{{ deploy_path }}"
+
+    - name: Obtain cert with certbot (manual step may be required)
+      debug:
+        msg: "Run certbot manually or use the certbot ansible role to obtain certificates."

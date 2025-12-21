@@ -1,0 +1,37 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>{{{css}}}</style>
+</head>
+<body>
+  <div class="header">
+    <img src="{{tenant.logo_url}}" alt="logo" width="120" />
+    <h1>Proforma Invoice</h1>
+  </div>
+  <div class="content">
+    <h2>{{proforma.number}}</h2>
+    <p>Buyer: {{buyer.name}} — {{buyer.country}}</p>
+    <p>Car: {{car.make}} {{car.model}} {{car.year}} — {{car.stock_no}}</p>
+    <div class="pricing">
+      <table>
+        <tbody>
+          {{#each proforma.lineItemsJson.items}}
+            <tr><td>{{this.name}}</td><td>{{formatMoney this.amount}}</td></tr>
+          {{/each}}
+          <tr><td>Total</td><td>{{formatMoney totals.grand}}</td></tr>
+        </tbody>
+      </table>
+    </div>
+    {{#if (lookup tenant.settings "warranty")}}
+      <p class="warranty-note">Exporter Warranty: {{#if (lookup tenant.settings.warranty "exporter_enabled")}}Included{{else}}Not available{{/if}} — <a href="{{lookup tenant.settings.warranty "terms_url"}}">View full warranty terms</a></p>
+    {{/if}}
+  </div>
+  <div class="footer">DocHash: {{doc_hash}}</div>
+  {{{qr_image}}}
+  {{#unless (ifPaid proforma.status)}}
+  <div class="draft">DRAFT</div>
+  {{/unless}}
+</body>
+</html>

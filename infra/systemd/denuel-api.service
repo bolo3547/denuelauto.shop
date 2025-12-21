@@ -1,0 +1,25 @@
+[Unit]
+Description=denuel-api (PM2-managed)
+After=network.target
+
+[Service]
+Type=simple
+# Change 'deploy' to the user you run the app as
+User=deploy
+Group=deploy
+Environment=NODE_ENV=production
+WorkingDirectory=/var/www/denuel
+
+# Use pm2-runtime to manage the ecosystem file in production
+ExecStart=/usr/bin/pm2-runtime start /var/www/denuel/ecosystem.config.js --env production
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
+
+# Notes:
+# - Ensure pm2 and pm2-runtime are installed globally: `npm i -g pm2 pm2-runtime`
+# - After creating this unit file: `sudo systemctl daemon-reload`
+# - Enable and start: `sudo systemctl enable --now denuel-api`
+# - Alternatively, use `pm2 startup systemd` and `pm2 save` instead of this unit file.

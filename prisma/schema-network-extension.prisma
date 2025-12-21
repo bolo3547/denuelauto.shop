@@ -1,0 +1,863 @@
+// =====================================================
+// DENUEL AUTO - NATIONAL AUTOMOTIVE INFRASTRUCTURE
+// Schema Extensions for Strategic Platform Features
+// =====================================================
+
+// =====================================================
+// 1) NETWORK EFFECT FEATURES - NATIONAL DEALER NETWORK
+// =====================================================
+
+// Enum for Network Membership Status
+enum NetworkMembershipStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  OPTED_OUT
+}
+
+enum NetworkListingStatus {
+  PENDING_REVIEW
+  ACTIVE
+  REJECTED
+  EXPIRED
+  SUSPENDED
+}
+
+enum FeaturedPlacementType {
+  HOMEPAGE_BANNER
+  SEARCH_TOP
+  CATEGORY_FEATURED
+  MAKE_SPOTLIGHT
+  DEAL_OF_DAY
+}
+
+// Network Membership - Tenants opt-in to Denuel Auto Network
+model NetworkMembership {
+  id                  String                  @id @default(uuid())
+  tenantId            String                  @unique
+  tenant              Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  status              NetworkMembershipStatus @default(PENDING)
+  joinedAt            DateTime?
+  optedOutAt          DateTime?
+  visibilityRank      Int                     @default(100) // Lower = higher priority
+  commissionRate      Decimal                 @default(0)   @db.Decimal(5, 2) // % for leads from network
+  agreedTermsAt       DateTime?
+  agreedTermsVersion  String?
+  monthlyLeadsReceived Int                    @default(0)
+  totalSalesFromNetwork Int                   @default(0)
+  reviewedBy          String?
+  reviewedAt          DateTime?
+  notes               String?                 @db.Text
+  settings            Json?                   // Custom visibility preferences
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+  
+  networkListings     NetworkListing[]
+  featuredPlacements  FeaturedPlacement[]
+  
+  @@index([status])
+  @@index([visibilityRank])
+  @@map("network_memberships")
+}
+
+// Network Listing - Cars exposed to National Network
+model NetworkListing {
+  id                String               @id @default(uuid())
+  membershipId      String
+  membership        NetworkMembership    @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  carId             String
+  car               Car                  @relation(fields: [carId], references: [id], onDelete: Cascade)
+  status            NetworkListingStatus @default(PENDING_REVIEW)
+  listPrice         Decimal              @db.Decimal(12, 2)
+  currency          String               @default("ZMW")
+  viewCount         Int                  @default(0)
+  inquiryCount      Int                  @default(0)
+  favoriteCount     Int                  @default(0)
+  qualityScore      Int?                 // 1-100 based on photos, description quality
+  boosted           Boolean              @default(false)
+  boostExpiresAt    DateTime?
+  rejectionReason   String?
+  approvedBy        String?
+  approvedAt        DateTime?
+  expiresAt         DateTime?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  
+  networkInquiries  NetworkInquiry[]
+  
+  @@unique([membershipId, carId])
+  @@index([status, qualityScore])
+  @@index([viewCount])
+  @@map("network_listings")
+}
+
+// Featured Placement - Paid promotion slots
+model FeaturedPlacement {
+  id             String               @id @default(uuid())
+  membershipId   String
+  membership     NetworkMembership    @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  type           FeaturedPlacementType
+  carId          String?              // If featuring specific car
+  startDate      DateTime
+  endDate        DateTime
+  amountPaid     Decimal              @db.Decimal(10, 2)
+  currency       String               @default("ZMW")
+  paymentRef     String?
+  impressions    Int                  @default(0)
+  clicks         Int                  @default(0)
+  conversions    Int                  @default(0)
+  active         Boolean              @default(true)
+  createdAt      DateTime             @default(now())
+  
+  @@index([type, startDate, endDate])
+  @@index([active])
+  @@map("featured_placements")
+}
+
+// =====================================================
+// 2) GLOBAL BUYER ACCOUNT SYSTEM
+// =====================================================
+
+enum BuyerAccountStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+// Global Buyer Account - Works across all dealers
+model GlobalBuyer {
+  id                  String             @id @default(uuid())
+  email               String             @unique
+  phone               String?
+  passwordHash        String?
+  fullName            String
+  avatarUrl           String?
+  status              BuyerAccountStatus @default(ACTIVE)
+  emailVerified       Boolean            @default(false)
+  phoneVerified       Boolean            @default(false)
+  preferredCurrency   String             @default("ZMW")
+  preferredLanguage   String             @default("en")
+  notificationPrefs   Json?
+  lastLoginAt         DateTime?
+  lastLoginIp         String?
+  loginCount          Int                @default(0)
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  
+  globalFavorites     GlobalFavorite[]
+  networkInquiries    NetworkInquiry[]
+  carComparisons      CarComparison[]
+  searchHistory       BuyerSearchHistory[]
+  priceAlerts         PriceAlert[]
+  buyerSessions       BuyerSession[]
+  financingApps       FinancingApplication[]
+  
+  @@index([email])
+  @@index([phone])
+  @@map("global_buyers")
+}
+
+// Session tracking for global buyers
+model BuyerSession {
+  id           String      @id @default(uuid())
+  buyerId      String
+  buyer        GlobalBuyer @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  token        String      @unique
+  ipAddress    String?
+  userAgent    String?     @db.Text
+  deviceType   String?
+  expiresAt    DateTime
+  createdAt    DateTime    @default(now())
+  
+  @@index([buyerId])
+  @@index([token])
+  @@map("buyer_sessions")
+}
+
+// Global Favorites - Across all dealers
+model GlobalFavorite {
+  id           String      @id @default(uuid())
+  buyerId      String
+  buyer        GlobalBuyer @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  carId        String
+  car          Car         @relation(fields: [carId], references: [id], onDelete: Cascade)
+  tenantId     String      // Track which dealer owns the car
+  notes        String?     @db.Text
+  createdAt    DateTime    @default(now())
+  
+  @@unique([buyerId, carId])
+  @@index([buyerId, tenantId])
+  @@map("global_favorites")
+}
+
+// Car Comparison - Compare cars across dealers
+model CarComparison {
+  id           String      @id @default(uuid())
+  buyerId      String
+  buyer        GlobalBuyer @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  name         String?
+  carIds       Json        // Array of car IDs being compared
+  tenantIds    Json        // Array of tenant IDs for tracking
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  
+  @@index([buyerId])
+  @@map("car_comparisons")
+}
+
+// Network Inquiry - Inquiries from global buyers
+model NetworkInquiry {
+  id             String         @id @default(uuid())
+  buyerId        String
+  buyer          GlobalBuyer    @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  listingId      String
+  listing        NetworkListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  tenantId       String         // Dealer receiving inquiry
+  message        String         @db.Text
+  contactMethod  String?        // "email", "phone", "whatsapp"
+  status         String         @default("PENDING") // PENDING, RESPONDED, CLOSED
+  respondedAt    DateTime?
+  responseTime   Int?           // Minutes to first response
+  convertedToLead Boolean       @default(false)
+  leadId         String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  
+  @@index([buyerId, createdAt])
+  @@index([tenantId, status])
+  @@map("network_inquiries")
+}
+
+// Buyer Search History
+model BuyerSearchHistory {
+  id           String      @id @default(uuid())
+  buyerId      String
+  buyer        GlobalBuyer @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  searchQuery  String?
+  filters      Json?       // make, model, priceRange, etc.
+  resultsCount Int?
+  createdAt    DateTime    @default(now())
+  
+  @@index([buyerId, createdAt])
+  @@map("buyer_search_history")
+}
+
+// Price Alert - Notify when price drops
+model PriceAlert {
+  id              String      @id @default(uuid())
+  buyerId         String
+  buyer           GlobalBuyer @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  carId           String?     // Specific car
+  make            String?     // Or generic alert
+  model           String?
+  maxPrice        Decimal     @db.Decimal(12, 2)
+  currency        String      @default("ZMW")
+  active          Boolean     @default(true)
+  lastTriggeredAt DateTime?
+  triggerCount    Int         @default(0)
+  createdAt       DateTime    @default(now())
+  
+  @@index([buyerId, active])
+  @@index([make, model, maxPrice])
+  @@map("price_alerts")
+}
+
+// =====================================================
+// 3) MARKET INTELLIGENCE & AI PRICING
+// =====================================================
+
+// Market Data Aggregation - Collected from all tenants
+model MarketDataPoint {
+  id              String   @id @default(uuid())
+  make            String
+  model           String
+  year            Int
+  bodyType        String?
+  transmission    String?
+  mileageRange    String?  // "0-50k", "50k-100k", etc.
+  condition       String?
+  avgPriceZmw     Decimal  @db.Decimal(12, 2)
+  avgPriceUsd     Decimal? @db.Decimal(12, 2)
+  minPrice        Decimal  @db.Decimal(12, 2)
+  maxPrice        Decimal  @db.Decimal(12, 2)
+  sampleCount     Int
+  daysToSellAvg   Int?
+  demandScore     Int?     // 1-100
+  supplyScore     Int?     // 1-100
+  priceVelocity   Decimal? @db.Decimal(5, 2) // % price change over period
+  periodStart     DateTime
+  periodEnd       DateTime
+  region          String?  // Could segment by region later
+  createdAt       DateTime @default(now())
+  
+  @@index([make, model, year])
+  @@index([periodStart, periodEnd])
+  @@index([demandScore])
+  @@map("market_data_points")
+}
+
+// Search Analytics - What buyers are looking for
+model SearchAnalytics {
+  id           String   @id @default(uuid())
+  make         String?
+  model        String?
+  bodyType     String?
+  minYear      Int?
+  maxYear      Int?
+  minPrice     Decimal? @db.Decimal(12, 2)
+  maxPrice     Decimal? @db.Decimal(12, 2)
+  searchCount  Int      @default(1)
+  resultCount  Int?
+  convertedToInquiry Int @default(0)
+  date         DateTime @default(now()) @db.Date
+  
+  @@index([make, model, date])
+  @@index([date, searchCount])
+  @@map("search_analytics")
+}
+
+// AI Price Recommendation
+model AiPriceRecommendation {
+  id                 String   @id @default(uuid())
+  tenantId           String
+  carId              String
+  car                Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
+  currentPrice       Decimal  @db.Decimal(12, 2)
+  recommendedPrice   Decimal  @db.Decimal(12, 2)
+  minRecommended     Decimal  @db.Decimal(12, 2)
+  maxRecommended     Decimal  @db.Decimal(12, 2)
+  confidence         Int      // 1-100
+  pricePosition      String   // "UNDERPRICED", "FAIR", "OVERPRICED"
+  reasonsJson        Json     // Array of reasons
+  comparablesCount   Int
+  avgDaysToSell      Int?
+  predictedDaysToSell Int?
+  marketTrend        String?  // "RISING", "STABLE", "FALLING"
+  lastUpdated        DateTime @default(now())
+  expiresAt          DateTime
+  dismissed          Boolean  @default(false)
+  
+  @@unique([carId])
+  @@index([tenantId, pricePosition])
+  @@index([expiresAt])
+  @@map("ai_price_recommendations")
+}
+
+// Market Insight - Generated insights for dashboard
+model MarketInsight {
+  id            String   @id @default(uuid())
+  category      String   // "PRICE_TREND", "DEMAND_SPIKE", "OPPORTUNITY", "WARNING"
+  title         String
+  description   String   @db.Text
+  dataJson      Json?    // Supporting data
+  impactScore   Int?     // 1-10
+  actionable    Boolean  @default(true)
+  targetAudience String  // "TENANT", "SUPER_ADMIN", "BUYER"
+  make          String?
+  model         String?
+  region        String?
+  validFrom     DateTime @default(now())
+  validTo       DateTime
+  viewCount     Int      @default(0)
+  createdAt     DateTime @default(now())
+  
+  @@index([category, targetAudience])
+  @@index([validFrom, validTo])
+  @@map("market_insights")
+}
+
+// =====================================================
+// 4) FINANCING PARTNER INTEGRATION
+// =====================================================
+
+enum FinancingPartnerStatus {
+  ACTIVE
+  INACTIVE
+  PENDING_APPROVAL
+}
+
+enum FinancingApplicationStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  EXPIRED
+  WITHDRAWN
+}
+
+// Financing Partner - Banks, microfinance, etc.
+model FinancingPartner {
+  id               String                  @id @default(uuid())
+  name             String
+  type             String                  // "BANK", "MICROFINANCE", "LEASING"
+  logo             String?
+  description      String?                 @db.Text
+  minLoanAmount    Decimal                 @db.Decimal(12, 2)
+  maxLoanAmount    Decimal                 @db.Decimal(12, 2)
+  minTenureMonths  Int
+  maxTenureMonths  Int
+  interestRateMin  Decimal                 @db.Decimal(5, 2)
+  interestRateMax  Decimal                 @db.Decimal(5, 2)
+  processingFee    Decimal?                @db.Decimal(5, 2) // Percentage
+  requirements     Json?                   // Array of required documents
+  eligibility      Json?                   // Eligibility criteria
+  apiEndpoint      String?
+  apiKey           String?
+  webhookUrl       String?
+  contactEmail     String?
+  contactPhone     String?
+  status           FinancingPartnerStatus  @default(PENDING_APPROVAL)
+  commissionRate   Decimal                 @default(0) @db.Decimal(5, 2) // Our commission %
+  priority         Int                     @default(100)
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+  
+  applications     FinancingApplication[]
+  
+  @@index([status, priority])
+  @@map("financing_partners")
+}
+
+// Financing Application - Buyer applies for loan
+model FinancingApplication {
+  id                String                      @id @default(uuid())
+  partnerId         String
+  partner           FinancingPartner            @relation(fields: [partnerId], references: [id])
+  buyerId           String?
+  buyer             GlobalBuyer?                @relation(fields: [buyerId], references: [id])
+  tenantId          String                      // Which dealer's car
+  carId             String
+  car               Car                         @relation(fields: [carId], references: [id])
+  applicantName     String
+  applicantEmail    String
+  applicantPhone    String
+  applicantNrc      String?
+  employmentStatus  String?
+  monthlyIncome     Decimal?                    @db.Decimal(12, 2)
+  requestedAmount   Decimal                     @db.Decimal(12, 2)
+  requestedTenure   Int                         // Months
+  downPayment       Decimal?                    @db.Decimal(12, 2)
+  documentsJson     Json?                       // Uploaded documents
+  status            FinancingApplicationStatus  @default(DRAFT)
+  partnerRefNo      String?                     // Reference from financing partner
+  approvedAmount    Decimal?                    @db.Decimal(12, 2)
+  approvedRate      Decimal?                    @db.Decimal(5, 2)
+  approvedTenure    Int?
+  rejectionReason   String?
+  notes             String?                     @db.Text
+  submittedAt       DateTime?
+  decidedAt         DateTime?
+  expiresAt         DateTime?
+  commissionEarned  Decimal?                    @db.Decimal(10, 2)
+  createdAt         DateTime                    @default(now())
+  updatedAt         DateTime                    @updatedAt
+  
+  @@index([partnerId, status])
+  @@index([tenantId, status])
+  @@index([buyerId])
+  @@map("financing_applications")
+}
+
+// =====================================================
+// 5) VERIFIED DEALER BADGE & TRUST SYSTEM
+// =====================================================
+
+enum VerificationStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  SUSPENDED
+  REVOKED
+}
+
+enum VerificationDocType {
+  BUSINESS_REGISTRATION
+  TAX_CERTIFICATE
+  TRADE_LICENSE
+  OWNER_ID
+  BANK_STATEMENT
+  PROOF_OF_ADDRESS
+  OTHER
+}
+
+// Dealer Verification
+model DealerVerification {
+  id                  String             @id @default(uuid())
+  tenantId            String             @unique
+  tenant              Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  status              VerificationStatus @default(UNVERIFIED)
+  verifiedAt          DateTime?
+  verifiedBy          String?
+  verificationLevel   Int                @default(0) // 0=none, 1=basic, 2=full, 3=premium
+  badgeType           String?            // "VERIFIED", "TRUSTED", "PREMIUM"
+  trustScore          Int?               // 1-100
+  totalSales          Int                @default(0)
+  totalReviews        Int                @default(0)
+  avgRating           Decimal?           @db.Decimal(2, 1)
+  disputeCount        Int                @default(0)
+  lastAuditAt         DateTime?
+  expiresAt           DateTime?
+  notes               String?            @db.Text
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  
+  documents           VerificationDocument[]
+  
+  @@index([status])
+  @@index([trustScore])
+  @@map("dealer_verifications")
+}
+
+// Verification Documents
+model VerificationDocument {
+  id               String              @id @default(uuid())
+  verificationId   String
+  verification     DealerVerification  @relation(fields: [verificationId], references: [id], onDelete: Cascade)
+  docType          VerificationDocType
+  fileName         String
+  fileUrl          String
+  fileSize         Int?
+  mimeType         String?
+  status           String              @default("PENDING") // PENDING, APPROVED, REJECTED
+  reviewedBy       String?
+  reviewedAt       DateTime?
+  rejectionReason  String?
+  expiresAt        DateTime?
+  createdAt        DateTime            @default(now())
+  
+  @@index([verificationId, docType])
+  @@map("verification_documents")
+}
+
+// Vehicle Inspection Checklist
+model VehicleInspection {
+  id               String   @id @default(uuid())
+  tenantId         String
+  carId            String
+  car              Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
+  inspectorName    String?
+  inspectorCert    String?  // Certification number
+  inspectionDate   DateTime
+  overallScore     Int?     // 1-100
+  overallGrade     String?  // A, B, C, D, F
+  exteriorScore    Int?
+  interiorScore    Int?
+  mechanicalScore  Int?
+  electricalScore  Int?
+  checklistJson    Json     // Detailed checklist results
+  photosJson       Json?    // Inspection photos
+  issues           Json?    // Array of issues found
+  recommendations  String?  @db.Text
+  reportUrl        String?  // Generated PDF report
+  verified         Boolean  @default(false)
+  verifiedBy       String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  @@index([carId])
+  @@index([tenantId, inspectionDate])
+  @@map("vehicle_inspections")
+}
+
+// =====================================================
+// 6) MARKETING AUTOMATION
+// =====================================================
+
+enum CampaignType {
+  EMAIL
+  WHATSAPP
+  SMS
+  PUSH
+  SOCIAL
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  RUNNING
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+// Marketing Campaign
+model MarketingCampaign {
+  id               String         @id @default(uuid())
+  tenantId         String
+  tenant           Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name             String
+  type             CampaignType
+  status           CampaignStatus @default(DRAFT)
+  subject          String?        // Email subject or message title
+  content          String         @db.Text
+  contentHtml      String?        @db.Text
+  templateId       String?
+  targetAudience   Json?          // Filter criteria for recipients
+  recipientCount   Int            @default(0)
+  sentCount        Int            @default(0)
+  deliveredCount   Int            @default(0)
+  openedCount      Int            @default(0)
+  clickedCount     Int            @default(0)
+  convertedCount   Int            @default(0)
+  unsubscribedCount Int           @default(0)
+  scheduledAt      DateTime?
+  startedAt        DateTime?
+  completedAt      DateTime?
+  createdBy        String
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  
+  recipients       CampaignRecipient[]
+  
+  @@index([tenantId, status])
+  @@index([type, scheduledAt])
+  @@map("marketing_campaigns")
+}
+
+// Campaign Recipients
+model CampaignRecipient {
+  id           String            @id @default(uuid())
+  campaignId   String
+  campaign     MarketingCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  email        String?
+  phone        String?
+  name         String?
+  sentAt       DateTime?
+  deliveredAt  DateTime?
+  openedAt     DateTime?
+  clickedAt    DateTime?
+  convertedAt  DateTime?
+  unsubscribed Boolean           @default(false)
+  bounced      Boolean           @default(false)
+  errorMessage String?
+  
+  @@index([campaignId, sentAt])
+  @@map("campaign_recipients")
+}
+
+// Marketing Templates
+model MarketingTemplate {
+  id           String       @id @default(uuid())
+  tenantId     String?      // Null = system template
+  name         String
+  type         CampaignType
+  category     String       // "NEW_ARRIVAL", "PRICE_DROP", "CLEARANCE", "PROMOTION"
+  subject      String?
+  content      String       @db.Text
+  contentHtml  String?      @db.Text
+  variables    Json?        // Available merge variables
+  thumbnail    String?
+  isDefault    Boolean      @default(false)
+  usageCount   Int          @default(0)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  
+  @@index([type, category])
+  @@map("marketing_templates")
+}
+
+// Social Media Auto-Post Queue
+model SocialPostQueue {
+  id           String   @id @default(uuid())
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  platform     String   // "FACEBOOK", "WHATSAPP_BUSINESS", "INSTAGRAM"
+  carId        String?
+  car          Car?     @relation(fields: [carId], references: [id], onDelete: SetNull)
+  caption      String   @db.Text
+  imageUrls    Json?
+  hashtags     Json?
+  scheduledAt  DateTime
+  postedAt     DateTime?
+  status       String   @default("QUEUED") // QUEUED, POSTED, FAILED, CANCELLED
+  externalId   String?  // Post ID from platform
+  errorMessage String?
+  engagement   Json?    // likes, comments, shares
+  createdAt    DateTime @default(now())
+  
+  @@index([tenantId, status])
+  @@index([scheduledAt])
+  @@map("social_post_queue")
+}
+
+// =====================================================
+// 7) OFFLINE MODE & DATA SYNC
+// =====================================================
+
+// Offline Sync Queue - Track pending syncs
+model OfflineSyncQueue {
+  id           String   @id @default(uuid())
+  tenantId     String
+  userId       String
+  deviceId     String
+  entityType   String   // "car", "lead", "inquiry", etc.
+  entityId     String
+  action       String   // "CREATE", "UPDATE", "DELETE"
+  payload      Json
+  priority     Int      @default(5)
+  attempts     Int      @default(0)
+  maxAttempts  Int      @default(5)
+  status       String   @default("PENDING") // PENDING, SYNCING, SYNCED, FAILED
+  syncedAt     DateTime?
+  errorMessage String?  @db.Text
+  createdAt    DateTime @default(now())
+  
+  @@index([tenantId, status])
+  @@index([deviceId, createdAt])
+  @@map("offline_sync_queue")
+}
+
+// Device Registration for offline mode
+model RegisteredDevice {
+  id             String   @id @default(uuid())
+  tenantId       String
+  userId         String
+  deviceId       String   @unique
+  deviceName     String?
+  deviceType     String?  // "mobile", "tablet", "desktop"
+  platform       String?  // "android", "ios", "web"
+  pushToken      String?
+  lastSyncAt     DateTime?
+  lastOnlineAt   DateTime?
+  offlineDataMb  Decimal? @db.Decimal(8, 2)
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  @@index([tenantId, userId])
+  @@index([lastOnlineAt])
+  @@map("registered_devices")
+}
+
+// =====================================================
+// 8) BACKUP & RECOVERY
+// =====================================================
+
+// Backup Record
+model TenantBackup {
+  id           String   @id @default(uuid())
+  tenantId     String
+  type         String   // "AUTO", "MANUAL", "PRE_MIGRATION"
+  status       String   @default("IN_PROGRESS") // IN_PROGRESS, COMPLETED, FAILED
+  sizeBytes    BigInt?
+  storageUrl   String?
+  checksum     String?
+  tablesJson   Json?    // Which tables were backed up
+  recordCounts Json?    // Count per table
+  triggeredBy  String?
+  completedAt  DateTime?
+  expiresAt    DateTime?
+  errorMessage String?  @db.Text
+  createdAt    DateTime @default(now())
+  
+  @@index([tenantId, createdAt])
+  @@index([status])
+  @@map("tenant_backups")
+}
+
+// Restore Log
+model RestoreLog {
+  id           String   @id @default(uuid())
+  tenantId     String
+  backupId     String
+  status       String   // "IN_PROGRESS", "COMPLETED", "FAILED", "ROLLED_BACK"
+  restoredBy   String
+  tablesJson   Json?
+  recordCounts Json?
+  startedAt    DateTime @default(now())
+  completedAt  DateTime?
+  errorMessage String?  @db.Text
+  
+  @@index([tenantId, startedAt])
+  @@map("restore_logs")
+}
+
+// =====================================================
+// 9) LEGAL & COMPLIANCE
+// =====================================================
+
+// Data Export Request - GDPR compliance
+model DataExportRequest {
+  id           String    @id @default(uuid())
+  tenantId     String?
+  buyerId      String?
+  requestType  String    // "TENANT_DATA", "BUYER_DATA", "FULL_EXPORT"
+  status       String    @default("PENDING") // PENDING, PROCESSING, READY, DOWNLOADED, EXPIRED
+  requestedBy  String
+  format       String    @default("JSON") // JSON, CSV, ZIP
+  downloadUrl  String?
+  expiresAt    DateTime?
+  downloadedAt DateTime?
+  createdAt    DateTime  @default(now())
+  
+  @@index([tenantId, status])
+  @@index([buyerId, status])
+  @@map("data_export_requests")
+}
+
+// Consent Record
+model ConsentRecord {
+  id           String   @id @default(uuid())
+  tenantId     String?
+  buyerId      String?
+  userId       String?
+  consentType  String   // "MARKETING", "DATA_PROCESSING", "TERMS", "COOKIES"
+  version      String
+  granted      Boolean
+  ipAddress    String?
+  userAgent    String?  @db.Text
+  grantedAt    DateTime @default(now())
+  revokedAt    DateTime?
+  
+  @@index([buyerId, consentType])
+  @@index([tenantId, consentType])
+  @@map("consent_records")
+}
+
+// =====================================================
+// 10) WHITE-LABEL / ENTERPRISE
+// =====================================================
+
+// White Label Configuration
+model WhiteLabelConfig {
+  id               String   @id @default(uuid())
+  tenantId         String   @unique
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  enabled          Boolean  @default(false)
+  removeBranding   Boolean  @default(false)
+  customDomain     String?
+  customLogo       String?
+  customFavicon    String?
+  customColors     Json?
+  customFonts      Json?
+  customFooter     String?  @db.Text
+  customCss        String?  @db.Text
+  customJs         String?  @db.Text
+  emailFromName    String?
+  emailFromDomain  String?
+  sslCertId        String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  @@map("white_label_configs")
+}
+
+// =====================================================
+// RELATION UPDATES - Add to existing models
+// =====================================================
+
+// Add these relations to Tenant model:
+// networkMembership     NetworkMembership?
+// dealerVerification    DealerVerification?
+// marketingCampaigns    MarketingCampaign[]
+// socialPostQueue       SocialPostQueue[]
+// whiteLabelConfig      WhiteLabelConfig?
+
+// Add these relations to Car model:
+// networkListings       NetworkListing[]
+// globalFavorites       GlobalFavorite[]
+// priceRecommendation   AiPriceRecommendation?
+// vehicleInspections    VehicleInspection[]
+// financingApplications FinancingApplication[]
+// socialPosts           SocialPostQueue[]

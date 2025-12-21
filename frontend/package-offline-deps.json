@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "idb": "^8.0.0"
+  },
+  "devDependencies": {
+    "@types/idb": "^2.1.5"
+  }
+}

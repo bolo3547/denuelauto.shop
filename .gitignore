@@ -1,0 +1,106 @@
+# ===========================================
+# Next.js + Node.js Professional .gitignore
+# ===========================================
+
+# -----------------------------------------
+# Dependencies
+# -----------------------------------------
+node_modules/
+.pnpm-store/
+
+# -----------------------------------------
+# Build Outputs
+# Build files are generated during deployment.
+# Run `npm run build` on your server after pulling.
+# -----------------------------------------
+.next/
+out/
+dist/
+build/
+.cache/
+**/.next/
+**/out/
+**/dist/
+**/build/
+
+# -----------------------------------------
+# Deploy Packages & Archives
+# These are generated artifacts, not source code.
+# -----------------------------------------
+deploy-package/
+verify-zip/
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+
+# -----------------------------------------
+# Environment Variables (NEVER commit secrets)
+# Create .env.example with placeholder values.
+# -----------------------------------------
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# -----------------------------------------
+# Logs
+# -----------------------------------------
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# -----------------------------------------
+# OS Generated Files
+# -----------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# -----------------------------------------
+# Editor & IDE
+# -----------------------------------------
+.idea/
+.vscode/
+*.swp
+*.swo
+*.sublime-workspace
+*.sublime-project
+
+# -----------------------------------------
+# Testing & Coverage
+# -----------------------------------------
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+playwright/.cache/
+
+# -----------------------------------------
+# Misc
+# -----------------------------------------
+*.pid
+*.seed
+*.pid.lock
+.eslintcache
+.node_repl_history
+yarn.lock
+app/_api_disabled/
+
+# -----------------------------------------
+# Large Media Files (optional)
+# -----------------------------------------
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.wmv

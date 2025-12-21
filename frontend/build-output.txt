@@ -1,0 +1,201 @@
+﻿  [1m[38;2;173;127;168mÔû▓ Next.js 14.2.33[39m[22m
+  - Environments: .env.local
+
+ [37m[1m [22m[39m Creating an optimized production build ...
+node.exe : [31mFailed to compile.
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([31mFailed to compile.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[39m
+./app/api/t/[slug]/public/quotes/route.ts
+Error: 
+  [31mx[0m Return statement is not allowed here
+     ,-[[36;1;4mC:\Users\DENUEL\Desktop\car dealership\New 
+folder\frontend\app\api\t\[slug]\public\quotes\route.ts[0m:91:1]
+ [2m 91[0m |             createdAt: new Date().toISOString(),
+ [2m 92[0m |           };
+ [2m 93[0m |     
+ [2m 94[0m | [31;1m,[0m[31;1m-[0m[31;1m>[0m       return NextResponse.json({
+ [2m 95[0m | [31;1m|[0m           // success: true,
+ [2m 96[0m | [31;1m|[0m           // data: mockQuote,
+ [2m 97[0m | [31;1m`[0m[31;1m-[0m[31;1m>[0m       });
+ [2m 98[0m |         }
+ [2m 99[0m |     
+ [2m100[0m |           // List all quotes for user
+     `----
+
+  [31mx[0m Return statement is not allowed here
+     ,-[[36;1;4mC:\Users\DENUEL\Desktop\car dealership\New 
+folder\frontend\app\api\t\[slug]\public\quotes\route.ts[0m:99:1]
+ [2m 99[0m |     
+ [2m100[0m |           // List all quotes for user
+ [2m101[0m |           if (!userEmail) {
+ [2m102[0m | [31;1m,[0m[31;1m-[0m[31;1m>[0m       return NextResponse.json(
+ [2m103[0m | [31;1m|[0m           { error: 'Email required to fetch quotes' },
+ [2m104[0m | [31;1m|[0m           { status: 400 }
+ [2m105[0m | [31;1m`[0m[31;1m-[0m[31;1m>[0m       );
+ [2m106[0m |         }
+ [2m107[0m |     
+ [2m108[0m |         // TODO: Fetch from database
+     `----
+
+  [31mx[0m Return statement is not allowed here
+     ,-[[36;1;4mC:\Users\DENUEL\Desktop\car dealership\New 
+folder\frontend\app\api\t\[slug]\public\quotes\route.ts[0m:146:1]
+ [2m146[0m |           },
+ [2m147[0m |         ];
+ [2m148[0m |     
+ [2m149[0m | [31;1m,[0m[31;1m-[0m[31;1m>[0m     return NextResponse.json({
+ [2m150[0m | [31;1m|[0m         // success: true,
+ [2m151[0m | [31;1m|[0m         // data: mockQuotes,
+ [2m152[0m | [31;1m|[0m         meta: {
+ [2m153[0m | [31;1m|[0m           // total: mockQuotes.length,
+ [2m154[0m | [31;1m|[0m         },
+ [2m155[0m | [31;1m`[0m[31;1m-[0m[31;1m>[0m     });
+ [2m156[0m |       } catch (error) {
+ [2m157[0m |         console.error('Error fetching quotes:', error);
+ [2m158[0m |         return NextResponse.json(
+     `----
+
+  [31mx[0m Expression expected
+     ,-[[36;1;4mC:\Users\DENUEL\Desktop\car dealership\New 
+folder\frontend\app\api\t\[slug]\public\quotes\route.ts[0m:153:1]
+ [2m153[0m |         // total: mockQuotes.length,
+ [2m154[0m |       },
+ [2m155[0m |     });
+ [2m156[0m |   } catch (error) {
+     : [31;1m  ^[0m
+ [2m157[0m |     console.error('Error fetching quotes:', error);
+ [2m158[0m |     return NextResponse.json(
+ [2m159[0m |       { error: 'Failed to fetch quotes' },
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./app/api/t/[slug]/public/quotes/route.ts
+
+./app/api/t/[slug]/public/saved-searches/route.ts
+Error: 
+  [31mx[0m Expression expected
+    ,-[[36;1;4mC:\Users\DENUEL\Desktop\car dealership\New 
+folder\frontend\app\api\t\[slug]\public\saved-searches\route.ts[0m:38:1]
+ [2m38[0m | 
+ [2m39[0m | // GET: Retrieve user's saved searches export async function GET( request: NextRequest, {  params }: { 
+params: Promise<{ slug: string }> } ) { if (IS_STATIC_EXPORT) return NextResponse.json({ ok: false }, { status: 200 }); try 
+{ const { slug } = await params;  // Get user ID from auth header/cookie const userId = request.headers.get('x-user-id'); 
+if (!userId) { return NextResponse.json( { error: 'Authentication required' },
+ [2m40[0m |         { status: 401 }
+ [2m41[0m |       );
+    : [31;1m      ^[0m
+ [2m42[0m |     }
+ [2m43[0m | 
+ [2m44[0m |     // TODO: Replace with actual database query
+    `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./app/api/t/[slug]/public/saved-searches/route.ts
+
+./app/api/t/[slug]/reservations/route.ts
+Error: 
+  [31mx[0m Expected '}', got 'hold'
+     ,-[[36;1;4mC:\Users\DENUEL\Desktop\car dealership\New 
+folder\frontend\app\api\t\[slug]\reservations\route.ts[0m:247:1]
+ [2m247[0m | switch (action) {
+ [2m248[0m |       // case 'confirm_deposit': {
+ [2m249[0m |         // Mark deposit as paidhold.depositPaidAt = new Date();
+ [2m250[0m |         hold.depositPaymentRef = depositPaymentRef;
+     : [31;1m        ^^^^[0m
+ [2m251[0m |         hold.status = 'deposit_paid';
+ [2m252[0m |         
+ [2m253[0m |         // Upgrade to fully reserved
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./app/api/t/[slug]/reservations/route.ts
+
+./app/api/tenants/[slug]/theme/route.ts
+Error: 
+  [31mx[0m Return statement is not allowed here
+    ,-[[36;1;4mC:\Users\DENUEL\Desktop\car dealership\New folder\frontend\app\api\tenants\[slug]\theme\route.ts[0m:5:1]
+ [2m 5[0m | 
+ [2m 6[0m | // Simple in-memory theme store
+ [2m 7[0m | // for dev: accept updates and
+ [2m 8[0m | return updated theme on GETlet currentTheme = { ...tenantTheme };
+    : [31;1m^^^^^^^^^^^^^^[0m
+ [2m 9[0m | 
+ [2m10[0m | export async function GET(req: Request, { params }: { params: { slug: string } }) {
+ [2m11[0m |   if (IS_STATIC_EXPORT)
+    `----
+
+  [31mx[0m Expected ';', got 'theme'
+    ,-[[36;1;4mC:\Users\DENUEL\Desktop\car dealership\New folder\frontend\app\api\tenants\[slug]\theme\route.ts[0m:5:1]
+ [2m 5[0m | 
+ [2m 6[0m | // Simple in-memory theme store
+ [2m 7[0m | // for dev: accept updates and
+ [2m 8[0m | return updated theme on GETlet currentTheme = { ...tenantTheme };
+    : [31;1m               ^^^^^[0m
+ [2m 9[0m | 
+ [2m10[0m | export async function GET(req: Request, { params }: { params: { slug: string } }) {
+ [2m11[0m |   if (IS_STATIC_EXPORT)
+    `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./app/api/tenants/[slug]/theme/route.ts
+
+./app/api/uploads/sign/route.ts
+Error: 
+  [31mx[0m Return statement is not allowed here
+    ,-[[36;1;4mC:\Users\DENUEL\Desktop\car dealership\New folder\frontend\app\api\uploads\sign\route.ts[0m:23:1]
+ [2m23[0m |         const command = new PutObjectCommand({ Bucket: S3_BUCKET, Key: key, ContentType: body.contentType || 
+'application/octet-stream' });
+ [2m24[0m |         const presigned = await getSignedUrl(client, command, { expiresIn: 60 * 10 });
+ [2m25[0m |         const fileUrl = `https://${S3_BUCKET}.s3.${AWS_REGION}.amazonaws.com/${encodeURIComponent(key)}`;
+ [2m26[0m |         return NextResponse.json({ uploadUrl: presigned, fileUrl });
+    : [31;1m        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+ [2m27[0m |       } catch (e) {
+ [2m28[0m |         // If AWS SDK isn't installed or signing fails, fall back to local receive // and continue to the 
+fallback below. // eslint-disable-next-line no-// console
+ [2m29[0m | console.warn('S3 presign failed or not available, falling back to local receiver:', String(e)); } }  // 
+Fallback: local receive endpoint const uploadUrl = `/api/uploads/receive?file=${encodeURIComponent(safeName)}`; const 
+fileUrl = `/uploads/${safeName}`; return NextResponse.json({ uploadUrl, fileUrl }); } catch (e) { return 
+NextResponse.json({ error: 'invalid_request' }, { status: 400 });
+    `----
+
+  [31mx[0m Expression expected
+    ,-[[36;1;4mC:\Users\DENUEL\Desktop\car dealership\New folder\frontend\app\api\uploads\sign\route.ts[0m:24:1]
+ [2m24[0m |         const presigned = await getSignedUrl(client, command, { expiresIn: 60 * 10 });
+ [2m25[0m |         const fileUrl = `https://${S3_BUCKET}.s3.${AWS_REGION}.amazonaws.com/${encodeURIComponent(key)}`;
+ [2m26[0m |         return NextResponse.json({ uploadUrl: presigned, fileUrl });
+ [2m27[0m |       } catch (e) {
+    : [31;1m      ^[0m
+ [2m28[0m |         // If AWS SDK isn't installed or signing fails, fall back to local receive // and continue to the 
+fallback below. // eslint-disable-next-line no-// console
+ [2m29[0m | console.warn('S3 presign failed or not available, falling back to local receiver:', String(e)); } }  // 
+Fallback: local receive endpoint const uploadUrl = `/api/uploads/receive?file=${encodeURIComponent(safeName)}`; const 
+fileUrl = `/uploads/${safeName}`; return NextResponse.json({ uploadUrl, fileUrl }); } catch (e) { return 
+NextResponse.json({ error: 'invalid_request' }, { status: 400 });
+ [2m30[0m |   }
+    `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./app/api/uploads/sign/route.ts
+
+
+> Build failed because of webpack errors

@@ -1,0 +1,6 @@
+{
+  "tenant":{"id":"t1","slug":"sample-dealer","name":"DENUEL Motors","logo_url":"https://cdn.example/logo.png","address":{"line1":"Plot 123, Cairo Rd","city":"Lusaka"},"phone":"+260 97 000 0000","email":"sales@denuel.com"},
+  "shipment":{"id":"sh1","ref":"SH-2025-001","is_paid":true,"etd":"2025-11-25","eta":"2025-12-10","tracking_no":"TRACK123","weight_kg":2000,"cbm":12.5,"marks_numbers":"Boxes: 1-3"},
+  "buyer":{"name":"John Buyer","country":"Tanzania","phone":"+255700000111"},
+  "car":{"stock_no":"DJ-8891","vin":"JF1GD706X6L512345","make":"Toyota","model":"Harrier","grade":"Premium","year":2017}
+}

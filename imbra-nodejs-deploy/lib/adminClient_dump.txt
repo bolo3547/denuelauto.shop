@@ -1,0 +1,79 @@
+﻿// Lightweight admin client helpers used by admin pages.
+// These are thin wrappers around the app API and provide fallbacks to
+// local mock data in development or when the API is unavailable.
+
+type AdminStats = { totalCars: number; totalOrders: number; totalCustomers: number };
+type AdminCar = any;
+type Inquiry = any;
+type Order = any;
+type Customer = any;
+
+async function safeFetchJson(url: string) {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('non-ok');
+    return await res.json();
+  } catch (err) {
+    return null;
+  }
+}
+
+const MOCK_STATS: AdminStats = { totalCars: 12, totalOrders: 42, totalCustomers: 8 };
+const MOCK_CARS: AdminCar[] = [];
+const MOCK_INQUIRIES: Inquiry[] = [];
+const MOCK_ORDERS: Order[] = [];
+const MOCK_CUSTOMERS: Customer[] = [];
+
+export async function getAdminStats(tenantSlug: string): Promise<AdminStats> {
+  const data = await safeFetchJson(`/api/t/${tenantSlug}/admin/stats`);
+  return data ?? MOCK_STATS;
+}
+
+export async function getAdminCars(tenantSlug: string): Promise<AdminCar[]> {
+  const data = await safeFetchJson(`/api/t/${tenantSlug}/admin/cars`);
+  return data ?? MOCK_CARS;
+}
+
+export async function updateAdminCar(tenantSlug: string, carId: string, payload: any): Promise<any> {
+  try {
+    const res = await fetch(`/api/t/${tenantSlug}/admin/cars/${carId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return res.ok ? await res.json() : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+export async function getAdminInquiries(tenantSlug: string): Promise<Inquiry[]> {
+  const data = await safeFetchJson(`/api/t/${tenantSlug}/admin/inquiries`);
+  return data ?? MOCK_INQUIRIES;
+}
+
+export async function getAdminOrders(tenantSlug: string): Promise<Order[]> {
+  const data = await safeFetchJson(`/api/t/${tenantSlug}/admin/orders`);
+  return data ?? MOCK_ORDERS;
+}
+
+export async function getAdminCustomers(tenantSlug: string): Promise<Customer[]> {
+  const data = await safeFetchJson(`/api/t/${tenantSlug}/admin/customers`);
+  return data ?? MOCK_CUSTOMERS;
+}
+
+export async function getBillingSummary(tenantSlug: string): Promise<any> {
+  const data = await safeFetchJson(`/api/t/${tenantSlug}/admin/billing/summary`);
+  return data ?? { balance: 0 };
+}
+
+export async function getHQPaymentInstructions(): Promise<any> {
+  const data = await safeFetchJson(`/api/hq/payment-instructions`);
+  return data ?? { instructions: '' };
+}
+
+export async function getHQSupportInfo(): Promise<any> {
+  const data = await safeFetchJson(`/api/hq/support`);
+  return data ?? { phone: '', email: '' };
+}
+

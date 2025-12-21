@@ -1,0 +1,33 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Proforma - {{number}}</title>
+    <style>
+      body { font-family: Arial, sans-serif; }
+      .header { display:flex; justify-content:space-between; }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div>
+        <h1>{{tenantName}}</h1>
+        <p>{{tenantAddress}}</p>
+      </div>
+      <div>
+        <h2>Proforma</h2>
+        <p>{{number}}</p>
+      </div>
+    </div>
+    <hr />
+    <h3>Buyer</h3>
+    <p>{{buyer.name}} - {{buyer.email}}</p>
+    <h3>Items</h3>
+    <ul>
+      {{#each lineItems}}
+        <li>{{this.name}} - {{this.amount}}</li>
+      {{/each}}
+    </ul>
+    <p>Total: {{total}}</p>
+  </body>
+</html>

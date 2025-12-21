@@ -1,0 +1,1983 @@
+// Prisma schema for multi-tenant car dealership management system
+// DB: PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id                   String                @id @default(uuid())
+  name                 String
+  slug                 String                @unique
+  theme                Json?
+  settings             Json?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  cars                 Car[]
+  branches             Branch[]
+  leads                Lead[]
+  quotes               Quote[]
+  proformas            ProformaInvoice[]
+  buyers               Buyer[]
+  agents               Agent[]
+  agentDeals           AgentDeal[]
+  payments             Payment[]
+  exportPorts          ExportPort[]
+  exportRules          ExportPriceRule[]
+  shipments            Shipment[]
+  testDrives           TestDrive[]
+  tradeIns             TradeIn[]
+  serviceJobs          ServiceJob[]
+  favorites            Favorite[]
+  auditLogs            AuditLog[]
+  escrowPayments       EscrowPayment[]
+  holds                Hold[]
+  inspections          Inspection[]
+  reviews              Review[]
+  affiliates           Affiliate[]
+  affiliateClicks      AffiliateClick[]
+  affiliatePayouts     AffiliatePayout[]
+  consignments         Consignment[]
+  fxSetting            FxSetting?
+  shippingTimelines    ShippingTimeline[]
+  commissionStatements CommissionStatement[]
+  backgroundJobs       BackgroundJob[]
+  ussdChannels         UssdChannel[]
+  ussdAudits           UssdAudit[]
+  watchlists           Watchlist[]
+  savedSearches        SavedSearch[]
+  users                User[]
+  paymentIntents       PaymentIntent[]
+  billingAccount       BillingAccount?
+  billingSubscriptions BillingSubscription[]
+  usageMeters          UsageMeter[]
+  entitlements         Entitlements?
+  invoices             Invoice[]
+  customDomains        CustomDomain[]
+  warrantySelections   WarrantySelection[]
+  loyaltyAccounts      LoyaltyAccount[]
+  loyaltyEvents        LoyaltyEvent[]
+  pushSubscriptions    PushSubscription[]
+  campaigns            Campaign[]
+  containerRules       ContainerRule[]
+  carDimensions        CarDimension[]
+  containerQuotes      ContainerQuote[]
+  countryGuides        CountryGuide[]
+  garageEntries        GarageEntry[]
+  payoutMobileWallets  PayoutMobileWallet[]
+  payoutBankAccounts   PayoutBankAccount[]
+  subscriptions        TenantSubscription[]
+  paymentInvoices      PaymentInvoice[]
+  paymentProofs        PaymentProof[]
+  tenantTheme          TenantTheme?
+  shippingRates        ShippingRate[]
+  cifOverrides         CifOverride[]
+  shippingEstimateLogs ShippingEstimateLog[]
+  parts                Part[]
+  partCategories       PartCategory[]
+  dealerReviews        DealerReview[]
+  promotionBanners     PromotionBanner[]
+  hqNotifications      HqNotification[]
+  appointments         Appointment[]
+  agentActivityLogs    AgentActivityLog[]
+  cifCalculations      CIFCalculation[]
+  customers            Customer[]
+  themes              Theme[]
+  agentsNew           Agent[]
+  referralsNew        Referral[]
+  salesNew            Sale[]
+  commissionsNew      Commission[]
+  buyerInquiries      BuyerInquiry[]
+  savedSearches       SavedSearch[]
+  orders              Order[]
+  buyerReviews        BuyerReview[]
+}
+
+model Car {
+  id               String            @id @default(uuid())
+  tenantId         String
+  tenant           Tenant            @relation(fields: [tenantId], references: [id])
+  stockNo          String
+  vin              String?
+  make             String
+  model            String
+  grade            String?
+  year             Int
+  bodyType         String?
+  transmission     String?
+  drivetrain       String?
+  fuelType         String?
+  engineCc         Int?
+  mileageKm        Int?
+  colorExt         String?
+  colorInt         String?
+  countryOrigin    String?
+  locationBranchId String?
+  locationBranch   Branch?           @relation(fields: [locationBranchId], references: [id])
+  steering         String?
+  featuresJson     Json?
+  condition        String?           @default("used")
+  remarks          String?
+  imagesJson       Json?
+  videosJson       Json?
+  vr360Json        Json?
+  priceLocalZmw    Decimal?          @db.Decimal(12, 2)
+  priceUsd         Decimal?          @db.Decimal(12, 2)
+  predictedPrice   Decimal?          @db.Decimal(12, 2)
+  predictedDemand  Int?
+  shortCode        String?           @map("short_code")
+  status           String
+  publishToPublic  Boolean           @default(false)
+  publishToExport  Boolean           @default(false)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  media            CarMedia[]
+  variants         CarVariant[]
+  leads            Lead[]
+  quotes           Quote[]
+  proformas        ProformaInvoice[]
+  agentDeals       AgentDeal[]
+  payments         Payment[]
+  shipments        Shipment[]
+  testDrives       TestDrive[]
+  tradeIns         TradeIn[]
+  favorites        Favorite[]
+  holds            Hold[]
+  inspections      Inspection[]
+  reviews          Review[]
+  dimensions       CarDimension[]
+  watchlists       Watchlist[]
+  garageEntries    GarageEntry[]
+  videoTours       VideoTour[]       @relation("CarToVideoTours")
+  images           CarImage[]        @relation("CarImages")
+  videos           CarVideo[]        @relation("CarVideos")
+  inquiries        Inquiry[]         @relation("CarInquiries")
+
+  @@unique([tenantId, stockNo])
+  @@unique([tenantId, shortCode])
+  @@index([tenantId, status])
+  @@index([tenantId, make, model, year])
+  @@index([tenantId, publishToPublic])
+  @@index([tenantId, publishToExport])
+  
+  // CIF Calculations
+  cifCalculations  CIFCalculation[]
+  
+  // Agent System Relations
+  referrals        Referral[]
+  sales            Sale[]
+  
+  // Buyer Portal Relations
+  favorites        Favorite[]
+  buyerInquiries   BuyerInquiry[]
+  carViews         CarView[]
+  orders           Order[]
+}
+
+model CIFCalculation {
+  id                  String   @id @default(uuid())
+  tenantId            String
+  tenant              Tenant   @relation(fields: [tenantId], references: [id])
+  carId               String?
+  car                 Car?     @relation(fields: [carId], references: [id])
+  createdById         String
+  createdBy           User     @relation(fields: [createdById], references: [id])
+  customerName        String?
+  
+  // Vehicle Details
+  carValue            Decimal  @db.Decimal(12, 2)
+  currency            String   @default("USD")
+  
+  // Origin & Destination
+  originPort          String
+  destinationPort     String
+  shippingMethod      String   @default("roro") // roro, container
+  
+  // Shipping Costs
+  freight             Decimal  @default(0) @db.Decimal(12, 2)
+  insurance           Decimal  @default(0) @db.Decimal(12, 2)
+  portCharges         Decimal  @default(0) @db.Decimal(12, 2)
+  inspectionFees      Decimal  @default(0) @db.Decimal(12, 2)
+  documentationFees   Decimal  @default(0) @db.Decimal(12, 2)
+  agentFees           Decimal  @default(0) @db.Decimal(12, 2)
+  
+  // Customs & Taxes
+  importDuty          Decimal  @default(0) @db.Decimal(12, 2)
+  exciseDuty          Decimal  @default(0) @db.Decimal(12, 2)
+  vat                 Decimal  @default(0) @db.Decimal(12, 2)
+  
+  // Additional Costs
+  additionalCosts     Json?    // Array of {description: string, amount: number}
+  
+  // Calculated Values
+  cifValue            Decimal  @default(0) @db.Decimal(12, 2)
+  totalLandingCost    Decimal  @default(0) @db.Decimal(12, 2)
+  
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  
+  @@index([tenantId, carId])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, customerName])
+}
+
+model Customer {
+  id               String    @id @default(uuid())
+  tenantId         String
+  tenant           Tenant    @relation(fields: [tenantId], references: [id])
+  name             String
+  email            String
+  phone            String
+  whatsapp         String?
+  source           String    // WEBSITE, PHONE, REFERRAL, WALK_IN, SOCIAL_MEDIA, IMPORT
+  status           String    @default("NEW") // NEW, CONTACTED, QUALIFIED, PROPOSAL_SENT, NEGOTIATING, WON, LOST, HIGH_PRIORITY
+  priority         String    @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  assignedToId     String?
+  assignedTo       User?     @relation("AssignedCustomers", fields: [assignedToId], references: [id])
+  interestedCars   Json?     // Array of car IDs
+  budget           Json?     // {min: number, max: number, currency: string}
+  location         String?
+  notes            String?
+  tags             Json?     // Array of tags
+  lastContactAt    DateTime?
+  nextFollowUpAt   DateTime?
+  convertedAt      DateTime?
+  inquiries        Inquiry[]
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  
+  @@unique([tenantId, email])
+  @@index([tenantId, status])
+  @@index([tenantId, source])
+  @@index([tenantId, priority])
+  @@index([tenantId, assignedToId])
+}
+
+model Inquiry {
+  id             String    @id @default(uuid())
+  tenantId       String
+  customerId     String
+  customer       Customer  @relation(fields: [customerId], references: [id])
+  carId          String?
+  car            Car?      @relation("CarInquiries", fields: [carId], references: [id])
+  message        String
+  type           String    @default("GENERAL") // GENERAL, PRICE_REQUEST, FINANCE_INQUIRY, TRADE_IN, TEST_DRIVE, INSPECTION
+  status         String    @default("NEW") // NEW, RESPONDED, FOLLOW_UP, CONVERTED, CLOSED
+  priority       String    @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  assignedToId   String?
+  assignedTo     User?     @relation("AssignedInquiries", fields: [assignedToId], references: [id])
+  response       String?
+  respondedAt    DateTime?
+  respondedById  String?
+  respondedBy    User?     @relation("InquiryResponses", fields: [respondedById], references: [id])
+  metadata       Json?     // Additional data like budget, preferences, etc.
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  
+  @@index([tenantId, customerId])
+  @@index([tenantId, carId])
+  @@index([tenantId, status])
+  @@index([tenantId, type])
+  @@index([tenantId, assignedToId])
+}
+
+model CarImage {
+  id            String   @id @default(uuid())
+  carId         String
+  car           Car      @relation("CarImages", fields: [carId], references: [id])
+  url           String
+  filename      String
+  fileSize      Int
+  mimeType      String
+  isPrimary     Boolean  @default(false)
+  uploadedById  String
+  uploadedBy    User     @relation("UploadedImages", fields: [uploadedById], references: [id])
+  createdAt     DateTime @default(now())
+  
+  @@index([carId, isPrimary])
+}
+
+model CarVideo {
+  id            String   @id @default(uuid())
+  carId         String
+  car           Car      @relation("CarVideos", fields: [carId], references: [id])
+  url           String
+  filename      String
+  fileSize      Int
+  mimeType      String
+  thumbnailUrl  String?
+  uploadedById  String
+  uploadedBy    User     @relation("UploadedVideos", fields: [uploadedById], references: [id])
+  createdAt     DateTime @default(now())
+  
+  @@index([carId])
+}
+
+model CarMedia {
+  id               String   @id @default(uuid())
+  tenantId         String
+  carId            String
+  car              Car      @relation(fields: [carId], references: [id])
+  url              String
+  type             String
+  sortNo           Int
+  watermarkApplied Boolean  @default(false)
+  metaJson         Json?
+  createdAt        DateTime @default(now())
+}
+
+model CarVariant {
+  id       String @id @default(uuid())
+  tenantId String
+  carId    String
+  car      Car    @relation(fields: [carId], references: [id])
+  name     String
+  value    String
+}
+
+model Branch {
+  id       String  @id @default(uuid())
+  tenantId String
+  tenant   Tenant  @relation(fields: [tenantId], references: [id])
+  name     String
+  address  String
+  phone    String
+  mapUrl   String?
+  cars     Car[]
+}
+
+model Lead {
+  id                 String             @id @default(uuid())
+  tenantId           String
+  tenant             Tenant             @relation(fields: [tenantId], references: [id])
+  carId              String?
+  car                Car?               @relation(fields: [carId], references: [id])
+  agentId            String?
+  agent              Agent?             @relation("AgentLeads", fields: [agentId], references: [id])
+  source             String // WEBSITE, PHONE, REFERRAL, WALK_IN, SOCIAL_MEDIA, IMPORT
+  status             String             @default("NEW") // NEW, CONTACTED, QUALIFIED, PROPOSAL_SENT, NEGOTIATING, WON, LOST, HIGH_PRIORITY
+  priority           String             @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  name               String
+  email              String
+  phone              String
+  message            String?
+  country            String?
+  budget             Decimal?           @db.Decimal(12, 2)
+  interestedVehicles Json? // Array of car preferences
+  lastContactedAt    DateTime?
+  nextFollowUpAt     DateTime?
+  assignedAt         DateTime?
+  lostReason         String? // If status = LOST
+  tags               Json? // ["hot", "cash-buyer", "financing-needed"]
+  customFields       Json? // Additional dealer-defined fields
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  quotes             Quote[]
+  tradeIns           TradeIn[]
+  appointments       Appointment[]
+  activityLogs       AgentActivityLog[] @relation("LeadActivityLogs")
+
+  @@index([tenantId, status])
+  @@index([tenantId, agentId])
+  @@index([tenantId, source])
+  @@index([tenantId, priority])
+  @@index([email])
+  @@index([phone])
+}
+
+model Quote {
+  id         String            @id @default(uuid())
+  tenantId   String
+  tenant     Tenant            @relation(fields: [tenantId], references: [id])
+  leadId     String
+  lead       Lead              @relation(fields: [leadId], references: [id])
+  carId      String
+  car        Car               @relation(fields: [carId], references: [id])
+  currency   String
+  price      Decimal           @db.Decimal(12, 2)
+  extrasJson Json?
+  validUntil DateTime
+  status     String
+  createdAt  DateTime          @default(now())
+  proformas  ProformaInvoice[]
+}
+
+model ProformaInvoice {
+  id                 String              @id @default(uuid())
+  tenantId           String
+  tenant             Tenant              @relation(fields: [tenantId], references: [id])
+  carId              String
+  car                Car                 @relation(fields: [carId], references: [id])
+  userId             String?
+  user               User?               @relation(fields: [userId], references: [id])
+  agentId            String?
+  agent              Agent?              @relation(fields: [agentId], references: [id])
+  buyerId            String?
+  buyer              Buyer?              @relation(fields: [buyerId], references: [id])
+  quoteId            String?
+  quote              Quote?              @relation(fields: [quoteId], references: [id])
+  number             String
+  currency           String
+  lineItemsJson      Json?
+  total              Decimal             @db.Decimal(12, 2)
+  notes              String?
+  status             String
+  createdAt          DateTime            @default(now())
+  payments           Payment[]
+  escrowPayments     EscrowPayment[]
+  paymentIntents     PaymentIntent[]
+  warrantySelections WarrantySelection[]
+}
+
+model Buyer {
+  id              String            @id @default(uuid())
+  tenantId        String
+  tenant          Tenant            @relation(fields: [tenantId], references: [id])
+  name            String
+  email           String?
+  phone           String?
+  country         String?
+  addressJson     Json?
+  kycDocsJson     Json?
+  proformas       ProformaInvoice[]
+  payments        Payment[]
+  shipments       Shipment[]
+  favorites       Favorite[]
+  agentDeals      AgentDeal[]
+  escrowPayments  EscrowPayment[]
+  reviews         Review[]
+  holds           Hold[]
+  watchlists      Watchlist[]
+  paymentIntents  PaymentIntent[]
+  loyaltyAccounts LoyaltyAccount[]
+  loyaltyEvents   LoyaltyEvent[]
+  garageEntries   GarageEntry[]
+  DealerReview    DealerReview[]
+}
+
+model Agent {
+  id                   String                @id @default(uuid())
+  tenantId             String
+  tenant               Tenant                @relation(fields: [tenantId], references: [id])
+  name                 String
+  email                String?
+  phone                String?
+  referralCode         String?               @unique
+  country              String?
+  commissionPercent    Decimal               @db.Decimal(5, 2)
+  portalAccess         Boolean               @default(true)
+  status               String                @default("ACTIVE") // ACTIVE, INACTIVE, SUSPENDED
+  skills               Json? // ["luxury", "suv", "sedan"] for lead assignment
+  maxLeadsPerDay       Int?                  @default(10)
+  workingHours         Json? // {"start": "08:00", "end": "18:00", "timezone": "Africa/Lusaka"}
+  deals                AgentDeal[]
+  proformas            ProformaInvoice[]
+  payments             Payment[]
+  commissionStatements CommissionStatement[]
+  assignedLeads        Lead[]                @relation("AgentLeads")
+  appointments         Appointment[]
+  activityLogs         AgentActivityLog[]
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+
+  @@index([tenantId, status])
+}
+
+model AgentDeal {
+  id                String    @id @default(uuid())
+  tenantId          String
+  tenant            Tenant    @relation(fields: [tenantId], references: [id])
+  agentId           String
+  agent             Agent     @relation(fields: [agentId], references: [id])
+  carId             String
+  car               Car       @relation(fields: [carId], references: [id])
+  buyerId           String?
+  buyer             Buyer?    @relation(fields: [buyerId], references: [id])
+  stage             String
+  commissionPercent Decimal   @db.Decimal(5, 2)
+  commissionAmount  Decimal?  @db.Decimal(12, 2)
+  locked            Boolean   @default(false)
+  lockedAt          DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+model Hold {
+  id        String   @id @default(uuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  carId     String
+  car       Car      @relation(fields: [carId], references: [id])
+  buyerId   String
+  buyer     Buyer    @relation(fields: [buyerId], references: [id])
+  amountUsd Decimal  @db.Decimal(12, 2)
+  expiresAt DateTime
+  status    String   @default("active")
+  createdAt DateTime @default(now())
+}
+
+model EscrowPayment {
+  id         String          @id @default(uuid())
+  tenantId   String
+  tenant     Tenant          @relation(fields: [tenantId], references: [id])
+  proformaId String
+  proforma   ProformaInvoice @relation(fields: [proformaId], references: [id])
+  buyerId    String
+  buyer      Buyer           @relation(fields: [buyerId], references: [id])
+  amountUsd  Decimal         @db.Decimal(12, 2)
+  status     String          @default("pending")
+  provider   String
+  metaJson   Json?
+  createdAt  DateTime        @default(now())
+}
+
+model Inspection {
+  id         String    @id @default(uuid())
+  tenantId   String
+  tenant     Tenant    @relation(fields: [tenantId], references: [id])
+  carId      String
+  car        Car       @relation(fields: [carId], references: [id])
+  grade      Decimal   @db.Decimal(2, 1)
+  sheetUrl   String?
+  verifiedBy String?
+  verifiedAt DateTime?
+  createdAt  DateTime  @default(now())
+}
+
+model Review {
+  id         String   @id @default(uuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  carId      String
+  car        Car      @relation(fields: [carId], references: [id])
+  buyerId    String
+  buyer      Buyer    @relation(fields: [buyerId], references: [id])
+  rating     Int
+  text       String?
+  photosJson Json?
+  status     String   @default("pending")
+  createdAt  DateTime @default(now())
+}
+
+model Affiliate {
+  id           String            @id @default(uuid())
+  tenantId     String
+  tenant       Tenant            @relation(fields: [tenantId], references: [id])
+  name         String
+  referralCode String            @unique
+  payoutPct    Decimal           @db.Decimal(5, 2)
+  status       String
+  createdAt    DateTime          @default(now())
+  clicks       AffiliateClick[]
+  payouts      AffiliatePayout[]
+}
+
+model AffiliateClick {
+  id          String    @id @default(uuid())
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+  affiliateId String
+  affiliate   Affiliate @relation(fields: [affiliateId], references: [id])
+  ip          String?
+  ua          String?
+  carId       String?
+  createdAt   DateTime  @default(now())
+}
+
+model AffiliatePayout {
+  id          String    @id @default(uuid())
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+  affiliateId String
+  affiliate   Affiliate @relation(fields: [affiliateId], references: [id])
+  month       String
+  amountUsd   Decimal   @db.Decimal(12, 2)
+  status      String
+  createdAt   DateTime  @default(now())
+}
+
+model Consignment {
+  id            String   @id @default(uuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  ownerName     String
+  phone         String
+  email         String
+  carJson       Json
+  photosJson    Json?
+  status        String   @default("new")
+  commissionPct Decimal  @db.Decimal(5, 2)
+  createdAt     DateTime @default(now())
+}
+
+model FxSetting {
+  tenantId     String  @id
+  tenant       Tenant  @relation(fields: [tenantId], references: [id])
+  usdToLocal   Decimal @db.Decimal(8, 4)
+  minMarginPct Decimal @db.Decimal(5, 2)
+}
+
+model ShippingTimeline {
+  id         String   @id @default(uuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  shipmentId String
+  statusKey  String
+  happenedAt DateTime
+  note       String?
+  createdAt  DateTime @default(now())
+}
+
+model CommissionStatement {
+  id             String   @id @default(uuid())
+  tenantId       String
+  tenant         Tenant   @relation(fields: [tenantId], references: [id])
+  agentId        String
+  agent          Agent    @relation(fields: [agentId], references: [id])
+  month          String
+  totalAmountUsd Decimal  @default("0.00") @db.Decimal(12, 2)
+  status         String   @default("draft")
+  pdfUrl         String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model BackgroundJob {
+  id          String   @id @default(uuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  type        String
+  payloadJson Json?
+  status      String   @default("queued")
+  attempts    Int      @default(0)
+  nextRunAt   DateTime
+  lastError   String?
+}
+
+model Payment {
+  id         String           @id @default(uuid())
+  tenantId   String
+  tenant     Tenant           @relation(fields: [tenantId], references: [id])
+  ref        String
+  carId      String?
+  car        Car?             @relation(fields: [carId], references: [id])
+  proformaId String?
+  proforma   ProformaInvoice? @relation(fields: [proformaId], references: [id])
+  buyerId    String?
+  buyer      Buyer?           @relation(fields: [buyerId], references: [id])
+  agentId    String?
+  agent      Agent?           @relation(fields: [agentId], references: [id])
+  method     String
+  currency   String
+  amount     Decimal          @db.Decimal(12, 2)
+  proofUrl   String?
+  status     String
+  receivedAt DateTime?
+  createdAt  DateTime         @default(now())
+  hash       String
+}
+
+model MobilePayment {
+  id             String   @id @default(cuid())
+  tenantId       String
+  msisdn         String
+  provider       String
+  amount         Decimal
+  currency       String   @default("ZMW")
+  status         String   @default("pending")
+  externalRef    String?  @map("external_ref")
+  requestId      String?  @unique @map("request_id")
+  idempotencyKey String?  @unique @map("idempotency_key")
+  metaJson       Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model UssdSession {
+  sessionId   String   @id
+  msisdn      String
+  step        String
+  payloadJson Json?
+  tenantId    String
+  lastSeenAt  DateTime @updatedAt
+}
+
+model Receipt {
+  id          String    @id @default(cuid())
+  paymentId   String
+  message     String
+  channel     String
+  deliveredAt DateTime?
+}
+
+model Merchant {
+  id        String @id @default(cuid())
+  tenantId  String
+  shortCode String @unique
+  name      String
+  status    String
+}
+
+model UssdChannel {
+  id        String   @id @default(uuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  shortcode String   @unique
+  createdAt DateTime @default(now())
+}
+
+model UssdAudit {
+  id         String   @id @default(uuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  msisdnHash String
+  event      String
+  dataJson   Json?
+  createdAt  DateTime @default(now())
+}
+
+model UssdCart {
+  id            String    @id @default(uuid())
+  tenantId      String
+  msisdn        String
+  stockNo       String
+  variantJson   Json?
+  holdExpiresAt DateTime?
+  status        String    @default("selecting") // selecting|held|expired|converted
+  createdAt     DateTime  @default(now())
+}
+
+model Orders {
+  id         String   @id @default(uuid())
+  tenantId   String
+  ref        String   @unique
+  msisdn     String
+  buyerId    String?
+  proformaId String?
+  status     String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model ExportPort {
+  id        String            @id @default(uuid())
+  tenantId  String
+  tenant    Tenant            @relation(fields: [tenantId], references: [id])
+  name      String
+  country   String
+  rules     ExportPriceRule[]
+  shipments Shipment[]
+}
+
+model ExportPriceRule {
+  id               String     @id @default(uuid())
+  tenantId         String
+  tenant           Tenant     @relation(fields: [tenantId], references: [id])
+  portId           String
+  port             ExportPort @relation(fields: [portId], references: [id])
+  baseUsd          Decimal?   @db.Decimal(12, 2)
+  freightUsd       Decimal?   @db.Decimal(12, 2)
+  insuranceRatePct Decimal?   @db.Decimal(5, 2)
+  otherJson        Json?
+}
+
+model Shipment {
+  id         String     @id @default(uuid())
+  tenantId   String
+  tenant     Tenant     @relation(fields: [tenantId], references: [id])
+  carId      String
+  car        Car        @relation(fields: [carId], references: [id])
+  buyerId    String
+  buyer      Buyer      @relation(fields: [buyerId], references: [id])
+  portId     String
+  port       ExportPort @relation(fields: [portId], references: [id])
+  shipMethod String
+  etd        DateTime?
+  eta        DateTime?
+  status     String
+  trackingNo String?
+  docsJson   Json?
+  createdAt  DateTime   @default(now())
+}
+
+model TestDrive {
+  id         String   @id @default(uuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  carId      String
+  car        Car      @relation(fields: [carId], references: [id])
+  name       String
+  phone      String
+  scheduleAt DateTime
+  status     String
+}
+
+model TradeIn {
+  id           String   @id @default(uuid())
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id])
+  leadId       String?
+  lead         Lead?    @relation(fields: [leadId], references: [id])
+  carId        String?
+  car          Car?     @relation(fields: [carId], references: [id])
+  ownerName    String
+  phone        String
+  make         String
+  model        String
+  year         Int
+  mileageKm    Int
+  photosJson   Json?
+  appraisalZmw Decimal? @db.Decimal(12, 2)
+  status       String
+}
+
+model ServiceJob {
+  id           String   @id @default(uuid())
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id])
+  carVinOrReg  String
+  customerName String
+  phone        String
+  jobDesc      String
+  bookedAt     DateTime
+  status       String
+}
+
+model Favorite {
+  id        String   @id @default(uuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  buyerId   String
+  buyer     Buyer    @relation(fields: [buyerId], references: [id])
+  carId     String
+  car       Car      @relation(fields: [carId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model GarageEntry {
+  id          String   @id @default(uuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  buyerId     String
+  buyer       Buyer    @relation(fields: [buyerId], references: [id])
+  carId       String?
+  car         Car?     @relation(fields: [carId], references: [id])
+  userCarJson Json?
+  note        String?
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId, buyerId])
+}
+
+model Watchlist {
+  id         String   @id @default(uuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  buyerId    String?
+  buyer      Buyer?   @relation(fields: [buyerId], references: [id])
+  email      String?
+  phone      String?
+  carId      String
+  car        Car      @relation(fields: [carId], references: [id])
+  alertTypes Json
+  createdAt  DateTime @default(now())
+
+  @@index([tenantId, carId], name: "watchlist_tenant_car")
+}
+
+model SavedSearch {
+  id        String   @id @default(uuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  email     String?
+  phone     String?
+  queryJson Json
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorType  String
+  actorId    String
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  action     String
+  entity     String
+  entityId   String
+  ip         String?
+  ua         String?
+  metaJson   Json?
+  beforeJson Json?
+  afterJson  Json?
+  createdAt  DateTime @default(now())
+}
+
+model User {
+  id               String            @id @default(uuid())
+  tenantId         String?
+  tenant           Tenant?           @relation(fields: [tenantId], references: [id])
+  email            String            @unique
+  passwordHash     String
+  name             String?
+  role             String // "GENERAL_MANAGER"|"SALES_MANAGER"|"SERVICE_MANAGER"|"FINANCE_MANAGER"|"MARKETING_MANAGER"|"HR_MANAGER"|"IT_MANAGER"|"SENIOR_SALES_EXEC"|"SALES_REP"|"INTERNET_SALES"|"FLEET_SALES"|"FNI_OFFICER"|"ACCOUNTANT"|"ADMIN_ASSISTANT"|"TITLE_CLERK"|"SERVICE_ADVISOR"|"TECHNICIAN"|"PARTS_MANAGER"|"PARTS_COUNTER"|"DETAILER"|"WARRANTY_CLERK"|"CUSTOMER_SERVICE"|"MARKETING_SPECIALIST"|"SOCIAL_MEDIA"|"RECEPTIONIST"|"LOT_ATTENDANT"|"SECURITY"|"IT_SUPPORT"
+  staffProfile     StaffProfile?
+  proformas        ProformaInvoice[]
+  refreshTokens    RefreshToken[]
+  hostedVideoTours VideoTour[]       @relation("UserToVideoTours")
+  sentMessages     Message[]         @relation("MessageFrom")
+  receivedMessages Message[]         @relation("MessageTo")
+  cifCalculations  CIFCalculation[]
+  uploadedImages   CarImage[]        @relation("UploadedImages")
+  uploadedVideos   CarVideo[]        @relation("UploadedVideos")
+  assignedCustomers Customer[]       @relation("AssignedCustomers")
+  assignedInquiries Inquiry[]        @relation("AssignedInquiries")
+  inquiryResponses Inquiry[]         @relation("InquiryResponses")
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+}
+
+// Department model for grouping staff
+model Department {
+  id    String         @id @default(cuid())
+  name  String         @unique
+  staff StaffProfile[]
+}
+
+// Staff profile for dealership employees
+model StaffProfile {
+  id               String      @id @default(cuid())
+  userId           String      @unique
+  user             User        @relation(fields: [userId], references: [id])
+  fullName         String
+  phone            String?
+  departmentId     String?
+  department       Department? @relation(fields: [departmentId], references: [id])
+  position         String?
+  email            String?
+  hireDate         DateTime?
+  address          String?
+  emergencyContact String?
+  salary           Decimal?    @db.Decimal(12, 2)
+  avatarUrl        String?
+  bio              String?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+}
+
+// Internal chat/messages between staff
+model Message {
+  id         String   @id @default(cuid())
+  fromUserId String
+  toUserId   String
+  fromUser   User     @relation("MessageFrom", fields: [fromUserId], references: [id])
+  toUser     User     @relation("MessageTo", fields: [toUserId], references: [id])
+  content    String
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+}
+
+// HQ Admin users for the Denuel HQ panel (separate from tenant-scoped users)
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  fullName     String?
+  role         String
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model VideoTour {
+  id          String   @id @default(uuid())
+  carId       String
+  car         Car      @relation("CarToVideoTours", fields: [carId], references: [id])
+  hostId      String
+  host        User     @relation("UserToVideoTours", fields: [hostId], references: [id])
+  scheduledAt DateTime
+  status      String   @default("scheduled")
+  createdAt   DateTime @default(now())
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  tokenHash String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+}
+
+model OneTimeCode {
+  id        String   @id @default(uuid())
+  tenantId  String?
+  contact   String
+  method    String
+  code      String
+  used      Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([contact])
+}
+
+// New models for payments, warranty, loyalty, push, container, and country guides
+
+model PaymentIntent {
+  id           String           @id @default(uuid())
+  tenantId     String
+  tenant       Tenant           @relation(fields: [tenantId], references: [id])
+  proformaId   String?
+  proforma     ProformaInvoice? @relation(fields: [proformaId], references: [id])
+  buyerId      String?
+  buyer        Buyer?           @relation(fields: [buyerId], references: [id])
+  provider     String // 'card' | 'paypal'
+  currency     String           @default("USD")
+  amount       Decimal          @db.Decimal(12, 2)
+  clientSecret String?
+  status       String           @default("pending")
+  providerMeta Json?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  metaJson     Json?
+}
+
+model PaymentProof {
+  id            String    @id @default(cuid())
+  tenantId      String
+  tenant        Tenant    @relation(fields: [tenantId], references: [id])
+  amount        Decimal   @db.Decimal(12, 2)
+  currency      String    @default("ZMW")
+  method        String
+  reference     String?
+  paidAt        DateTime
+  fileUrl       String?
+  status        String    @default("pending")
+  reviewedBy    String?
+  reviewedAt    DateTime?
+  reviewerNotes String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([tenantId])
+}
+
+model PaymentProvider {
+  tenantId     String   @id
+  providerJson Json?    @map("provider_json")
+  updatedAt    DateTime @updatedAt
+}
+
+model WebhookEvent {
+  id        String   @id @default(uuid())
+  tenantId  String
+  eventId   String   @unique
+  payload   Json
+  processed Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model BillingAccount {
+  tenantId   String   @id
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  provider   String // stripe | paypal
+  customerId String?
+  metaJson   Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model BillingSubscription {
+  id               String    @id @default(uuid())
+  tenantId         String
+  tenant           Tenant    @relation(fields: [tenantId], references: [id])
+  provider         String
+  subscriptionId   String
+  planKey          String
+  status           String
+  currentPeriodEnd DateTime?
+  entitlementsJson Json?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([tenantId, subscriptionId])
+}
+
+model UsageMeter {
+  id          String   @id @default(uuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  meterKey    String
+  qty         Int      @default(0)
+  windowStart DateTime
+  windowEnd   DateTime
+  updatedAt   DateTime @updatedAt
+
+  @@unique([tenantId, meterKey, windowStart, windowEnd])
+  @@index([tenantId, meterKey])
+}
+
+model Entitlements {
+  tenantId    String   @id
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  modulesJson Json
+  updatedAt   DateTime @updatedAt
+}
+
+model Invoice {
+  id        String   @id @default(uuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  provider  String
+  invoiceId String
+  amount    Decimal  @db.Decimal(12, 2)
+  currency  String
+  url       String?
+  status    String
+  issuedAt  DateTime
+  createdAt DateTime @default(now())
+
+  @@unique([tenantId, invoiceId])
+}
+
+model CustomDomain {
+  id        String   @id @default(uuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  hostname  String   @unique
+  status    String   @default("pending") // pending | verifying | active | disabled
+  dnsTxt    String?
+  certMeta  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model WarrantySelection {
+  id             String          @id @default(uuid())
+  tenantId       String
+  tenant         Tenant          @relation(fields: [tenantId], references: [id])
+  proformaId     String
+  proforma       ProformaInvoice @relation(fields: [proformaId], references: [id])
+  selected       Boolean         @default(false)
+  coverageJson   Json?
+  addedAmountUsd Decimal         @default("0.00") @db.Decimal(12, 2)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@unique([tenantId, proformaId])
+}
+
+model LoyaltyAccount {
+  id        String   @id @default(uuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  buyerId   String
+  buyer     Buyer    @relation(fields: [buyerId], references: [id])
+  points    Int      @default(0)
+  updatedAt DateTime @updatedAt
+}
+
+model LoyaltyEvent {
+  id        String   @id @default(uuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  buyerId   String
+  buyer     Buyer    @relation(fields: [buyerId], references: [id])
+  type      String // 'earn' | 'redeem' | 'adjust'
+  points    Int
+  refType   String?
+  refId     String?
+  createdAt DateTime @default(now())
+}
+
+model PushSubscription {
+  id         String   @id @default(uuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  userId     String?
+  endpoint   String
+  p256dh     String
+  auth       String
+  topicsJson Json?
+  createdAt  DateTime @default(now())
+}
+
+model Campaign {
+  id        String   @id @default(uuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  topic     String
+  title     String
+  body      String
+  deepLink  String?
+  createdAt DateTime @default(now())
+}
+
+model ContainerRule {
+  id             String  @id @default(uuid())
+  tenantId       String
+  tenant         Tenant  @relation(fields: [tenantId], references: [id])
+  type           String // '20ft' | '40ft'
+  maxCbm         Decimal @db.Decimal(6, 2)
+  maxUnits       Int
+  baseFreightUsd Decimal @db.Decimal(12, 2)
+}
+
+model CarDimension {
+  id       String  @id @default(uuid())
+  tenantId String
+  tenant   Tenant  @relation(fields: [tenantId], references: [id])
+  carId    String
+  car      Car     @relation(fields: [carId], references: [id])
+  lengthMm Int
+  widthMm  Int
+  heightMm Int
+  cbm      Decimal @db.Decimal(6, 2)
+}
+
+model ContainerQuote {
+  id            String   @id @default(uuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  buyerId       String?
+  itemsJson     Json
+  containerType String
+  estFreightUsd Decimal  @db.Decimal(12, 2)
+  status        String   @default("requested")
+  createdAt     DateTime @default(now())
+}
+
+model CountryGuide {
+  id           String   @id @default(uuid())
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id])
+  countryCode  String
+  slug         String
+  title        String
+  sectionsJson Json
+  faqJson      Json
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+}
+
+// HQ-wide settings for support and owner contact information
+model SupportSettings {
+  id             String   @id @default(cuid())
+  ownerName      String?
+  supportEmail   String
+  primaryPhone   String
+  secondaryPhone String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// Payout mobile wallets used by HQ for receiving tenant subscription payments
+model PayoutMobileWallet {
+  id              String            @id @default(cuid())
+  label           String
+  provider        String
+  phoneNumber     String
+  accountName     String?
+  currency        String
+  isDefault       Boolean           @default(false)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  billingSettings BillingSettings[]
+  Tenant          Tenant?           @relation(fields: [tenantId], references: [id])
+  tenantId        String?
+}
+
+// Billing settings stored at HQ level (singleton row expected)
+model BillingSettings {
+  id                   String              @id @default(cuid())
+  defaultWalletId      String?
+  defaultWallet        PayoutMobileWallet? @relation(fields: [defaultWalletId], references: [id])
+  manualPaymentEnabled Boolean             @default(true)
+  onlineGatewayEnabled Boolean             @default(false)
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+}
+
+model PayoutBankAccount {
+  id            String   @id @default(cuid())
+  label         String
+  bankName      String
+  branch        String
+  accountNumber String
+  accountName   String
+  currency      String   @default("ZMW")
+  isDefault     Boolean  @default(false)
+  tenantId      String?
+  tenant        Tenant?  @relation(fields: [tenantId], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model TenantPlan {
+  id            String               @id @default(cuid())
+  name          String
+  key           String               @unique
+  priceUsd      Decimal              @db.Decimal(8, 2)
+  featuresJson  Json
+  isActive      Boolean              @default(true)
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  subscriptions TenantSubscription[]
+}
+
+model TenantSubscription {
+  id                 String     @id @default(cuid())
+  tenantId           String
+  tenant             Tenant     @relation(fields: [tenantId], references: [id])
+  planId             String
+  plan               TenantPlan @relation(fields: [planId], references: [id])
+  status             String // "active"|"canceled"|"past_due"
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+}
+
+model PaymentInvoice {
+  id             String    @id @default(cuid())
+  tenantId       String
+  tenant         Tenant    @relation(fields: [tenantId], references: [id])
+  subscriptionId String?
+  amount         Decimal   @db.Decimal(12, 2)
+  currency       String    @default("USD")
+  status         String // "pending"|"paid"|"overdue"
+  paidAt         DateTime?
+  dueAt          DateTime
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model TenantTheme {
+  id        String   @id @default(cuid())
+  tenantId  String   @unique
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  tokens    Json // { primary: "#000", accent: "#ff6600", ... }
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ShippingRate {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  toCountry     String
+  toPort        String?
+  freightPerM3  Decimal? @db.Decimal(12, 2)
+  freightFlat   Decimal? @db.Decimal(12, 2)
+  insurancePct  Decimal  @default(0.5) @db.Decimal(5, 2)
+  portFees      Decimal  @default(0) @db.Decimal(12, 2)
+  customsTaxPct Decimal  @default(0) @db.Decimal(5, 2)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model CifOverride {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  toCountry String
+  toPort    String?
+  overrides Json // { freight: 1000, insurance: 50, ... }
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ShippingEstimateLog {
+  id               String   @id @default(cuid())
+  tenantId         String
+  tenant           Tenant   @relation(fields: [tenantId], references: [id])
+  stockNo          String?
+  vehiclePrice     Decimal  @db.Decimal(12, 2)
+  toCountry        String
+  toPort           String?
+  includeInsurance Boolean
+  estimateJson     Json
+  createdAt        DateTime @default(now())
+}
+
+model Part {
+  id          String       @id @default(cuid())
+  tenantId    String
+  tenant      Tenant       @relation(fields: [tenantId], references: [id])
+  categoryId  String
+  category    PartCategory @relation(fields: [categoryId], references: [id])
+  name        String
+  description String?
+  price       Decimal      @db.Decimal(12, 2)
+  imageUrl    String?
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model PartCategory {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  parts       Part[]
+}
+
+model DealerReview {
+  id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  buyerId    String?
+  buyer      Buyer?   @relation(fields: [buyerId], references: [id])
+  rating     Int // 1-5
+  title      String
+  content    String
+  isApproved Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model PromotionBanner {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  title       String
+  description String?
+  imageUrl    String
+  linkUrl     String?
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model HqNotification {
+  id             String   @id @default(cuid())
+  type           String // "PAYMENT_PROOF_SUBMITTED"|"TENANT_SUSPENDED"|etc
+  tenantId       String?
+  tenant         Tenant?  @relation(fields: [tenantId], references: [id])
+  paymentProofId String?
+  title          String
+  message        String
+  isRead         Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Appointment {
+  id          String   @id @default(uuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  leadId      String
+  lead        Lead     @relation(fields: [leadId], references: [id])
+  agentId     String
+  agent       Agent    @relation(fields: [agentId], references: [id])
+  title       String
+  description String?
+  type        String   @default("MEETING") // MEETING, CALL, TEST_DRIVE, VIEWING, DELIVERY
+  status      String   @default("SCHEDULED") // SCHEDULED, COMPLETED, CANCELLED, RESCHEDULED, NO_SHOW
+  startTime   DateTime
+  endTime     DateTime
+  location    String?
+  meetingLink String?
+  notes       String?
+  reminders   Json? // [{"type": "email", "minutes": 30}, {"type": "sms", "minutes": 15}]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId, agentId])
+  @@index([tenantId, status])
+  @@index([startTime])
+}
+
+model AgentActivityLog {
+  id          String   @id @default(uuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  agentId     String
+  agent       Agent    @relation(fields: [agentId], references: [id])
+  leadId      String?
+  lead        Lead?    @relation("LeadActivityLogs", fields: [leadId], references: [id])
+  action      String // LEAD_ASSIGNED, LEAD_CONTACTED, STATUS_CHANGED, APPOINTMENT_SCHEDULED, etc.
+  description String
+  metadata    Json? // Additional context like old/new values, call duration, etc.
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId, agentId])
+  @@index([tenantId, leadId])
+  @@index([createdAt])
+}
+
+model Theme {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  
+  // Theme configuration as JSON
+  themeConfig Json
+  
+  // Status
+  isActive    Boolean  @default(false)
+  isGlobal    Boolean  @default(false) // Global themes are platform-wide presets
+  
+  // Tenant relation
+  tenantId    String?
+  tenant      Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([tenantId, isActive]) // Only one active theme per tenant
+  @@map("themes")
+}
+
+model Agent {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  // Agent Profile
+  agentCode       String   @unique // Unique referral code
+  isActive        Boolean  @default(true)
+  tier            AgentTier @default(BRONZE)
+  
+  // Commission Settings
+  baseCommission  Decimal  @default(0) @db.Decimal(5, 2) // Percentage
+  bonusCommission Decimal  @default(0) @db.Decimal(5, 2) // Additional percentage for performance
+  
+  // Performance Metrics
+  totalSales      Int      @default(0)
+  totalCommission Decimal  @default(0) @db.Decimal(12, 2)
+  totalReferrals  Int      @default(0)
+  
+  // Relations
+  referrals       Referral[]
+  commissions     Commission[]
+  sales           Sale[]
+  
+  // Metadata
+  joinedAt        DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([tenantId, agentCode])
+  @@map("agents")
+}
+
+model Referral {
+  id             String        @id @default(cuid())
+  agentId        String
+  agent          Agent         @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  tenantId       String
+  tenant         Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  // Referral Details
+  referralCode   String        @unique
+  customerEmail  String
+  customerName   String
+  customerPhone  String?
+  
+  // Car Interest
+  carId          String?
+  car            Car?          @relation(fields: [carId], references: [id], onDelete: SetNull)
+  
+  // Status Tracking
+  status         ReferralStatus @default(PENDING)
+  source         String        @default("DIRECT") // DIRECT, WEBSITE, SOCIAL_MEDIA, etc.
+  
+  // Conversion Tracking
+  convertedAt    DateTime?
+  saleId         String?       @unique
+  sale           Sale?         @relation(fields: [saleId], references: [id], onDelete: SetNull)
+  
+  // Commission
+  commissionRate Decimal       @default(0) @db.Decimal(5, 2)
+  commissionPaid Boolean       @default(false)
+  
+  // Metadata
+  metadata       Json?         // Additional tracking data
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  
+  @@index([agentId, status])
+  @@index([tenantId, status])
+  @@index([customerEmail])
+  @@map("referrals")
+}
+
+model Sale {
+  id              String     @id @default(cuid())
+  tenantId        String
+  tenant          Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  // Sale Details
+  saleNumber      String     @unique
+  customerId      String
+  customer        Customer   @relation(fields: [customerId], references: [id])
+  carId           String
+  car             Car        @relation(fields: [carId], references: [id])
+  
+  // Agent Assignment
+  agentId         String?
+  agent           Agent?     @relation(fields: [agentId], references: [id], onDelete: SetNull)
+  
+  // Financial Details
+  salePrice       Decimal    @db.Decimal(12, 2)
+  downPayment     Decimal    @default(0) @db.Decimal(12, 2)
+  financing       Boolean    @default(false)
+  
+  // Status
+  status          SaleStatus @default(PENDING)
+  paymentStatus   PaymentStatus @default(PENDING)
+  
+  // Dates
+  saleDate        DateTime   @default(now())
+  deliveryDate    DateTime?
+  
+  // Relations
+  referral        Referral?
+  commissions     Commission[]
+  
+  // Metadata
+  notes           String?    @db.Text
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  
+  @@index([tenantId, status])
+  @@index([agentId])
+  @@index([customerId])
+  @@map("sales")
+}
+
+model Commission {
+  id              String          @id @default(cuid())
+  agentId         String
+  agent           Agent           @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  tenantId        String
+  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  // Commission Details
+  saleId          String
+  sale            Sale            @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  
+  // Financial Details
+  saleAmount      Decimal         @db.Decimal(12, 2)
+  commissionRate  Decimal         @db.Decimal(5, 2)
+  commissionAmount Decimal        @db.Decimal(12, 2)
+  
+  // Status & Payment
+  status          CommissionStatus @default(PENDING)
+  paidAt          DateTime?
+  paymentMethod   String?         // BANK_TRANSFER, MOBILE_MONEY, etc.
+  transactionRef  String?
+  
+  // Metadata
+  notes           String?         @db.Text
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  @@index([agentId, status])
+  @@index([tenantId, status])
+  @@index([saleId])
+  @@map("commissions")
+}
+
+enum AgentTier {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
+}
+
+enum ReferralStatus {
+  PENDING
+  QUALIFIED
+  CONVERTED
+  EXPIRED
+  CANCELLED
+}
+
+enum SaleStatus {
+  PENDING
+  CONFIRMED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  PARTIAL
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum CommissionStatus {
+  PENDING
+  APPROVED
+  PAID
+  DISPUTED
+  CANCELLED
+}
+
+model Buyer {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  firstName       String
+  lastName        String
+  phone           String?
+  country         String?  @default("Zambia")
+  city            String?
+  
+  // Authentication
+  passwordHash    String
+  emailVerified   Boolean  @default(false)
+  verificationToken String?
+  
+  // Profile
+  avatar          String?
+  dateOfBirth     DateTime?
+  gender          String?
+  
+  // Preferences
+  budget          Decimal?         @db.Decimal(12, 2)
+  currency        String           @default("USD")
+  preferredMakes  Json?            // Array of preferred car makes
+  preferredModels Json?            // Array of preferred car models
+  notifications   BuyerNotificationSettings?
+  
+  // Status
+  isActive        Boolean  @default(true)
+  isBlacklisted   Boolean  @default(false)
+  
+  // Relations
+  favorites       Favorite[]
+  inquiries       BuyerInquiry[]
+  viewHistory     CarView[]
+  searchHistory   SavedSearch[]
+  orders          Order[]
+  reviews         BuyerReview[]
+  
+  // Metadata
+  lastLoginAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([email])
+  @@index([country])
+  @@index([isActive])
+  @@map("buyers")
+}
+
+model BuyerNotificationSettings {
+  id                    String  @id @default(cuid())
+  buyerId               String  @unique
+  buyer                 Buyer   @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  
+  // Email Notifications
+  emailNewCars          Boolean @default(true)
+  emailPriceDrops       Boolean @default(true)
+  emailPromotions       Boolean @default(false)
+  emailInquiryUpdates   Boolean @default(true)
+  
+  // SMS Notifications
+  smsEnabled            Boolean @default(false)
+  smsNewCars            Boolean @default(false)
+  smsPriceDrops         Boolean @default(false)
+  
+  // Push Notifications
+  pushEnabled           Boolean @default(true)
+  pushNewCars           Boolean @default(true)
+  pushPriceDrops        Boolean @default(true)
+  pushPromotions        Boolean @default(false)
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  @@map("buyer_notification_settings")
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  buyerId   String
+  buyer     Buyer    @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  carId     String
+  car       Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
+  
+  // Metadata
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+  
+  @@unique([buyerId, carId])
+  @@index([buyerId])
+  @@index([carId])
+  @@map("favorites")
+}
+
+model BuyerInquiry {
+  id              String           @id @default(cuid())
+  buyerId         String
+  buyer           Buyer            @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  tenantId        String
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  // Inquiry Details
+  subject         String
+  message         String           @db.Text
+  type            BuyerInquiryType @default(GENERAL)
+  
+  // Car Context (optional)
+  carId           String?
+  car             Car?             @relation(fields: [carId], references: [id], onDelete: SetNull)
+  
+  // Response
+  response        String?          @db.Text
+  respondedAt     DateTime?
+  respondedById   String?
+  respondedBy     User?            @relation("BuyerInquiryResponses", fields: [respondedById], references: [id], onDelete: SetNull)
+  
+  // Status
+  status          InquiryStatus    @default(OPEN)
+  priority        InquiryPriority  @default(MEDIUM)
+  
+  // Metadata
+  metadata        Json?            // Additional context
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  
+  @@index([buyerId, status])
+  @@index([tenantId, status])
+  @@index([carId])
+  @@map("buyer_inquiries")
+}
+
+model CarView {
+  id        String   @id @default(cuid())
+  buyerId   String?
+  buyer     Buyer?   @relation(fields: [buyerId], references: [id], onDelete: SetNull)
+  carId     String
+  car       Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
+  
+  // Tracking
+  ipAddress String?
+  userAgent String?
+  source    String?  // direct, search, social, etc.
+  
+  // Session
+  sessionId String?
+  duration  Int?     // seconds viewed
+  
+  createdAt DateTime @default(now())
+  
+  @@index([buyerId])
+  @@index([carId])
+  @@index([createdAt])
+  @@map("car_views")
+}
+
+model SavedSearch {
+  id          String   @id @default(cuid())
+  buyerId     String?
+  buyer       Buyer?   @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  // Search Parameters
+  name        String
+  filters     Json     // Search filters as JSON
+  
+  // Notifications
+  alertEnabled Boolean @default(false)
+  lastAlertAt  DateTime?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([buyerId])
+  @@index([tenantId])
+  @@map("saved_searches")
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  orderNumber     String      @unique
+  buyerId         String
+  buyer           Buyer       @relation(fields: [buyerId], references: [id])
+  tenantId        String
+  tenant          Tenant      @relation(fields: [tenantId], references: [id])
+  
+  // Order Details
+  carId           String
+  car             Car         @relation(fields: [carId], references: [id])
+  
+  // Pricing
+  carPrice        Decimal     @db.Decimal(12, 2)
+  shippingCost    Decimal?    @db.Decimal(12, 2)
+  insuranceCost   Decimal?    @db.Decimal(12, 2)
+  totalAmount     Decimal     @db.Decimal(12, 2)
+  currency        String      @default("USD")
+  
+  // Payment
+  paymentStatus   PaymentStatus @default(PENDING)
+  paymentMethod   String?
+  downPayment     Decimal?    @db.Decimal(12, 2)
+  
+  // Shipping
+  shippingAddress Json?
+  shippingMethod  String?
+  estimatedDelivery DateTime?
+  
+  // Status
+  status          OrderStatus @default(PENDING)
+  
+  // Metadata
+  notes           String?     @db.Text
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  @@index([buyerId, status])
+  @@index([tenantId, status])
+  @@index([orderNumber])
+  @@map("orders")
+}
+
+model BuyerReview {
+  id        String   @id @default(cuid())
+  buyerId   String
+  buyer     Buyer    @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  // Review Details
+  rating    Int      // 1-5 stars
+  title     String?
+  comment   String?  @db.Text
+  
+  // Context
+  orderId   String?
+  order     Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  
+  // Status
+  isVerified Boolean @default(false)
+  isPublished Boolean @default(false)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([tenantId, isPublished])
+  @@index([buyerId])
+  @@map("buyer_reviews")
+}

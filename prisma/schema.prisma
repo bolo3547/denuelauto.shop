@@ -1,0 +1,2310 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model admin_users {
+  id           String    @id
+  email        String    @unique
+  passwordHash String
+  fullName     String
+  role         String
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime
+}
+
+model affiliate {
+  id       String @id
+  tenantId String
+  name     String
+  tenant   tenant @relation(fields: [tenantId], references: [id], map: "Affiliate_tenantId_fkey")
+
+  @@index([tenantId], map: "Affiliate_tenantId_fkey")
+}
+
+model affiliateclick {
+  id       String @id
+  tenantId String
+  tenant   tenant @relation(fields: [tenantId], references: [id], map: "AffiliateClick_tenantId_fkey")
+
+  @@index([tenantId], map: "AffiliateClick_tenantId_fkey")
+}
+
+model affiliatepayout {
+  id       String @id
+  tenantId String
+  tenant   tenant @relation(fields: [tenantId], references: [id], map: "AffiliatePayout_tenantId_fkey")
+
+  @@index([tenantId], map: "AffiliatePayout_tenantId_fkey")
+}
+
+model agentactivitylog {
+  id       String @id
+  tenantId String
+  agentId  String
+  agents   agents @relation(fields: [agentId], references: [id], map: "AgentActivityLog_agentId_fkey")
+  tenant   tenant @relation(fields: [tenantId], references: [id], map: "AgentActivityLog_tenantId_fkey")
+
+  @@index([agentId], map: "AgentActivityLog_agentId_fkey")
+  @@index([tenantId], map: "AgentActivityLog_tenantId_fkey")
+}
+
+model agentdeal {
+  id                String    @id
+  tenantId          String
+  agentId           String
+  carId             String
+  buyerId           String?
+  stage             String
+  commissionPercent Decimal   @db.Decimal(5, 2)
+  commissionAmount  Decimal?  @db.Decimal(12, 2)
+  locked            Boolean   @default(false)
+  lockedAt          DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime
+  agents            agents    @relation(fields: [agentId], references: [id], map: "AgentDeal_agentId_fkey")
+  buyers            buyers?   @relation(fields: [buyerId], references: [id], map: "AgentDeal_buyerId_fkey")
+  car               car       @relation(fields: [carId], references: [id], map: "AgentDeal_carId_fkey")
+  tenant            tenant    @relation(fields: [tenantId], references: [id], map: "AgentDeal_tenantId_fkey")
+
+  @@index([agentId], map: "AgentDeal_agentId_fkey")
+  @@index([buyerId], map: "AgentDeal_buyerId_fkey")
+  @@index([carId], map: "AgentDeal_carId_fkey")
+  @@index([tenantId], map: "AgentDeal_tenantId_fkey")
+}
+
+model agents {
+  id                  String                @id
+  userId              String                @unique
+  tenantId            String
+  agentCode           String                @unique
+  isActive            Boolean               @default(true)
+  tier                agents_tier           @default(BRONZE)
+  baseCommission      Decimal               @default(0.00) @db.Decimal(5, 2)
+  bonusCommission     Decimal               @default(0.00) @db.Decimal(5, 2)
+  totalSales          Int                   @default(0)
+  totalCommission     Decimal               @default(0.00) @db.Decimal(12, 2)
+  totalReferrals      Int                   @default(0)
+  name                String?
+  email               String?
+  phone               String?
+  country             String?
+  commissionPercent   Decimal?              @db.Decimal(5, 2)
+  portalAccess        Boolean               @default(true)
+  status              String                @default("ACTIVE")
+  skills              Json?
+  maxLeadsPerDay      Int?                  @default(10)
+  workingHours        Json?
+  referralCode        String?               @unique
+  joinedAt            DateTime              @default(now())
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime
+  agentactivitylog    agentactivitylog[]
+  agentdeal           agentdeal[]
+  tenant              tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user                user                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  appointment         appointment[]
+  commissions         commissions[]
+  commissionstatement commissionstatement[]
+  lead                lead[]
+  payment             payment[]
+  proformainvoice     proformainvoice[]
+  referrals           referrals[]
+  sales               sales[]
+
+  @@unique([tenantId, agentCode])
+  @@index([tenantId, status])
+}
+
+model appointment {
+  id       String @id
+  tenantId String
+  agentId  String
+  agents   agents @relation(fields: [agentId], references: [id], map: "Appointment_agentId_fkey")
+  tenant   tenant @relation(fields: [tenantId], references: [id], map: "Appointment_tenantId_fkey")
+
+  @@index([agentId], map: "Appointment_agentId_fkey")
+  @@index([tenantId], map: "Appointment_tenantId_fkey")
+}
+
+model auditlog {
+  id         String   @id
+  actorType  String
+  actorId    String
+  tenantId   String
+  action     String
+  entity     String
+  entityId   String
+  ip         String?
+  ua         String?
+  metaJson   Json?
+  beforeJson Json?
+  afterJson  Json?
+  createdAt  DateTime @default(now())
+  tenant     tenant   @relation(fields: [tenantId], references: [id], map: "AuditLog_tenantId_fkey")
+
+  @@index([tenantId], map: "AuditLog_tenantId_fkey")
+}
+
+model backgroundjob {
+  id       String @id
+  tenantId String
+  tenant   tenant @relation(fields: [tenantId], references: [id], map: "BackgroundJob_tenantId_fkey")
+
+  @@index([tenantId], map: "BackgroundJob_tenantId_fkey")
+}
+
+model billing_entitlements {
+  id          String   @id
+  tenantId    String
+  modulesJson Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+  tenant      tenant   @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId], map: "billing_entitlements_tenantId_fkey")
+}
+
+model billingaccount {
+  tenantId   String   @id
+  provider   String
+  customerId String?
+  metaJson   Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime
+  tenant     tenant   @relation(fields: [tenantId], references: [id], map: "BillingAccount_tenantId_fkey")
+}
+
+model billingsubscription {
+  id               String    @id
+  tenantId         String
+  provider         String
+  subscriptionId   String
+  planKey          String
+  status           String
+  currentPeriodEnd DateTime?
+  entitlementsJson Json?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime
+  tenant           tenant    @relation(fields: [tenantId], references: [id], map: "BillingSubscription_tenantId_fkey")
+
+  @@unique([tenantId, subscriptionId], map: "BillingSubscription_tenantId_subscriptionId_key")
+}
+
+model branch {
+  id        String   @id
+  tenantId  String
+  name      String
+  address   String?
+  phone     String?
+  email     String?
+  isMain    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  tenant    tenant   @relation(fields: [tenantId], references: [id], map: "Branch_tenantId_fkey")
+  car       car[]
+
+  @@index([tenantId], map: "Branch_tenantId_fkey")
+}
+
+model buyer_inquiries {
+  id            String                   @id
+  buyerId       String
+  tenantId      String
+  subject       String
+  message       String                   @db.Text
+  type          buyer_inquiries_type     @default(GENERAL)
+  carId         String?
+  response      String?                  @db.Text
+  respondedAt   DateTime?
+  respondedById String?
+  status        buyer_inquiries_status   @default(OPEN)
+  priority      buyer_inquiries_priority @default(MEDIUM)
+  metadata      Json?
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime
+  buyers        buyers                   @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  car           car?                     @relation(fields: [carId], references: [id])
+  user          user?                    @relation(fields: [respondedById], references: [id])
+  tenant        tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([buyerId, status])
+  @@index([carId])
+  @@index([respondedById], map: "buyer_inquiries_respondedById_fkey")
+  @@index([tenantId, status])
+}
+
+model buyer_notification_settings {
+  id                  String   @id
+  buyerId             String   @unique
+  emailNewCars        Boolean  @default(true)
+  emailPriceDrops     Boolean  @default(true)
+  emailPromotions     Boolean  @default(false)
+  emailInquiryUpdates Boolean  @default(true)
+  smsEnabled          Boolean  @default(false)
+  smsNewCars          Boolean  @default(false)
+  smsPriceDrops       Boolean  @default(false)
+  pushEnabled         Boolean  @default(true)
+  pushNewCars         Boolean  @default(true)
+  pushPriceDrops      Boolean  @default(true)
+  pushPromotions      Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime
+  buyers              buyers   @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+}
+
+model buyer_reviews {
+  id          String   @id
+  buyerId     String
+  tenantId    String
+  rating      Int
+  title       String?
+  comment     String?  @db.Text
+  orderId     String?
+  isVerified  Boolean  @default(false)
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+  buyers      buyers   @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  orders      orders?  @relation(fields: [orderId], references: [id])
+  tenant      tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([buyerId])
+  @@index([orderId], map: "buyer_reviews_orderId_fkey")
+  @@index([tenantId, isPublished])
+}
+
+model buyers {
+  id                          String                       @id
+  email                       String?                      @unique
+  firstName                   String?
+  lastName                    String?
+  phone                       String?
+  country                     String?                      @default("Zambia")
+  city                        String?
+  passwordHash                String?
+  emailVerified               Boolean                      @default(false)
+  verificationToken           String?
+  avatar                      String?
+  dateOfBirth                 DateTime?
+  gender                      String?
+  budget                      Decimal?                     @db.Decimal(12, 2)
+  currency                    String                       @default("USD")
+  preferredMakes              Json?
+  preferredModels             Json?
+  isActive                    Boolean                      @default(true)
+  isBlacklisted               Boolean                      @default(false)
+  tenantId                    String?
+  name                        String?
+  addressJson                 Json?
+  kycDocsJson                 Json?
+  lastLoginAt                 DateTime?
+  createdAt                   DateTime                     @default(now())
+  updatedAt                   DateTime
+  agentdeal                   agentdeal[]
+  buyer_inquiries             buyer_inquiries[]
+  buyer_notification_settings buyer_notification_settings?
+  buyer_reviews               buyer_reviews[]
+  tenant                      tenant?                      @relation(fields: [tenantId], references: [id])
+  car_views                   car_views[]
+  dealerreview                dealerreview[]
+  escrowpayment               escrowpayment[]
+  favorites                   favorites[]
+  garageentry                 garageentry[]
+  hold                        hold[]
+  loyaltyaccount              loyaltyaccount[]
+  loyaltyevent                loyaltyevent[]
+  orders                      orders[]
+  payment                     payment[]
+  paymentintent               paymentintent[]
+  proformainvoice             proformainvoice[]
+  review                      review[]
+  saved_searches              saved_searches[]
+  shipment                    shipment[]
+  watchlist                   watchlist[]
+
+  @@index([country])
+  @@index([email])
+  @@index([isActive])
+  @@index([tenantId], map: "buyers_tenantId_fkey")
+}
+
+model campaign {
+  id       String @id
+  tenantId String
+  tenant   tenant @relation(fields: [tenantId], references: [id], map: "Campaign_tenantId_fkey")
+
+  @@index([tenantId], map: "Campaign_tenantId_fkey")
+}
+
+model car {
+  id               String            @id
+  tenantId         String
+  stockNo          String
+  vin              String?
+  make             String
+  model            String
+  grade            String?
+  year             Int
+  bodyType         String?
+  transmission     String?
+  drivetrain       String?
+  fuelType         String?
+  engineCc         Int?
+  mileageKm        Int?
+  colorExt         String?
+  colorInt         String?
+  countryOrigin    String?
+  locationBranchId String?
+  steering         String?
+  featuresJson     Json?
+  condition        String?           @default("used")
+  remarks          String?
+  imagesJson       Json?
+  videosJson       Json?
+  vr360Json        Json?
+  priceLocalZmw    Decimal?          @db.Decimal(12, 2)
+  priceUsd         Decimal?          @db.Decimal(12, 2)
+  predictedPrice   Decimal?          @db.Decimal(12, 2)
+  predictedDemand  Int?
+  short_code       String?
+  status           String
+  publishToPublic  Boolean           @default(false)
+  publishToExport  Boolean           @default(false)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime
+  agentdeal        agentdeal[]
+  buyer_inquiries  buyer_inquiries[]
+  branch           branch?           @relation(fields: [locationBranchId], references: [id], map: "Car_locationBranchId_fkey")
+  tenant           tenant            @relation(fields: [tenantId], references: [id], map: "Car_tenantId_fkey")
+  car_views        car_views[]
+  cardimension     cardimension[]
+  carimage         carimage[]
+  carmedia         carmedia[]
+  carvariant       carvariant[]
+  carvideo         carvideo[]
+  cifcalculation   cifcalculation[]
+  favorites        favorites[]
+  garageentry      garageentry[]
+  hold             hold[]
+  inquiry          inquiry[]
+  inspection       inspection[]
+  lead             lead[]
+  orders           orders[]
+  payment          payment[]
+  proformainvoice  proformainvoice[]
+  quote            quote[]
+  referrals        referrals[]
+  review           review[]
+    sales            sales[]
+    shipment         shipment[]
+    testdrive        testdrive[]
+    tradein          tradein[]
+    videotour        videotour[]
+    watchlist        watchlist[]
+    networkListings       networkListing[]
+    globalFavorites       globalFavorite[]
+    priceRecommendation   aiPriceRecommendation?
+    financingApplications financingApplication[]
+
+  @@unique([tenantId, short_code], map: "Car_tenantId_short_code_key")
+  @@unique([tenantId, stockNo], map: "Car_tenantId_stockNo_key")
+  @@index([locationBranchId], map: "Car_locationBranchId_fkey")
+  @@index([tenantId, make, model, year], map: "Car_tenantId_make_model_year_idx")
+  @@index([tenantId, publishToExport], map: "Car_tenantId_publishToExport_idx")
+  @@index([tenantId, publishToPublic], map: "Car_tenantId_publishToPublic_idx")
+  @@index([tenantId, status], map: "Car_tenantId_status_idx")
+}
+
+model car_views {
+  id        String   @id
+  buyerId   String?
+  carId     String
+  ipAddress String?
+  userAgent String?
+  source    String?
+  sessionId String?
+  duration  Int?
+  createdAt DateTime @default(now())
+  buyers    buyers?  @relation(fields: [buyerId], references: [id])
+  car       car      @relation(fields: [carId], references: [id], onDelete: Cascade)
+
+  @@index([buyerId])
+  @@index([carId])
+  @@index([createdAt])
+}
+
+model cardimension {
+  id       String  @id
+  tenantId String
+  carId    String
+  cbm      Decimal @db.Decimal(6, 2)
+  car      car     @relation(fields: [carId], references: [id], map: "CarDimension_carId_fkey")
+  tenant   tenant  @relation(fields: [tenantId], references: [id], map: "CarDimension_tenantId_fkey")
+
+  @@index([carId], map: "CarDimension_carId_fkey")
+  @@index([tenantId], map: "CarDimension_tenantId_fkey")
+}
+
+model carimage {
+  id    String @id
+  carId String
+  url   String
+  car   car    @relation(fields: [carId], references: [id], map: "CarImage_carId_fkey")
+
+  @@index([carId], map: "CarImage_carId_fkey")
+}
+
+model carmedia {
+  id               String   @id
+  tenantId         String?
+  carId            String
+  type             String
+  url              String
+  sortNo           Int?
+  watermarkApplied Boolean? @default(false)
+  metaJson         Json?
+  car              car      @relation(fields: [carId], references: [id], map: "CarMedia_carId_fkey")
+  tenant           tenant?  @relation(fields: [tenantId], references: [id], map: "CarMedia_tenantId_fkey")
+
+  @@index([carId], map: "CarMedia_carId_fkey")
+  @@index([tenantId], map: "CarMedia_tenantId_fkey")
+}
+
+model carvariant {
+  id    String   @id
+  carId String
+  name  String
+  price Decimal? @db.Decimal(12, 2)
+  car   car      @relation(fields: [carId], references: [id], map: "CarVariant_carId_fkey")
+
+  @@index([carId], map: "CarVariant_carId_fkey")
+}
+
+model carvideo {
+  id    String @id
+  carId String
+  url   String
+  car   car    @relation(fields: [carId], references: [id], map: "CarVideo_carId_fkey")
+
+  @@index([carId], map: "CarVideo_carId_fkey")
+}
+
+model cifcalculation {
+  id               String   @id
+  tenantId         String
+  carId            String?
+  createdById      String
+  customerName     String?
+  carValue         Decimal  @db.Decimal(12, 2)
+  currency         String   @default("USD")
+  originPort       String
+  destinationPort  String
+  shippingMethod   String   @default("roro")
+  freightCost      Decimal  @db.Decimal(12, 2)
+  insuranceCost    Decimal  @db.Decimal(12, 2)
+  totalCIF         Decimal  @db.Decimal(12, 2)
+  handlingFee      Decimal  @default(0.00) @db.Decimal(12, 2)
+  documentationFee Decimal  @default(0.00) @db.Decimal(12, 2)
+  inspectionFee    Decimal  @default(0.00) @db.Decimal(12, 2)
+  dutyRate         Decimal  @default(0.00) @db.Decimal(5, 2)
+  vatRate          Decimal  @default(0.00) @db.Decimal(5, 2)
+  dutyAmount       Decimal  @default(0.00) @db.Decimal(12, 2)
+  vatAmount        Decimal  @default(0.00) @db.Decimal(12, 2)
+  totalLandedCost  Decimal  @db.Decimal(12, 2)
+  calculatedAt     DateTime @default(now())
+  notes            String?
+  car              car?     @relation(fields: [carId], references: [id], map: "CIFCalculation_carId_fkey")
+  user             user     @relation(fields: [createdById], references: [id], map: "CIFCalculation_createdById_fkey")
+  tenant           tenant   @relation(fields: [tenantId], references: [id], map: "CIFCalculation_tenantId_fkey")
+
+  @@index([carId], map: "CIFCalculation_carId_idx")
+  @@index([createdById], map: "CIFCalculation_createdById_fkey")
+  @@index([tenantId, calculatedAt], map: "CIFCalculation_tenantId_calculatedAt_idx")
+}
+
+model cifoverride {
+  id       String @id
+  tenantId String
+  tenant   tenant @relation(fields: [tenantId], references: [id], map: "CifOverride_tenantId_fkey")
+
+  @@index([tenantId], map: "CifOverride_tenantId_fkey")
+}
+
+model commissions {
+  id               String             @id
+  agentId          String
+  tenantId         String
+  saleId           String
+  saleAmount       Decimal            @db.Decimal(12, 2)
+  commissionRate   Decimal            @db.Decimal(5, 2)
+  commissionAmount Decimal            @db.Decimal(12, 2)
+  status           commissions_status @default(PENDING)
+  paidAt           DateTime?
+  paymentMethod    String?
+  transactionRef   String?
+  notes            String?            @db.Text
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime
+  agents           agents             @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  sales            sales              @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  tenant           tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([agentId, status])
+  @@index([saleId])
+  @@index([tenantId, status])
+}
+
+model commissionstatement {
+  id       String @id
+  tenantId String
+  agentId  String
+  agents   agents @relation(fields: [agentId], references: [id], map: "CommissionStatement_agentId_fkey")
+  tenant   tenant @relation(fields: [tenantId], references: [id], map: "CommissionStatement_tenantId_fkey")
+
+  @@index([agentId], map: "CommissionStatement_agentId_fkey")
+  @@index([tenantId], map: "CommissionStatement_tenantId_fkey")
+}
+
+model consignment {
+  id       String @id
+  tenantId String
+  tenant   tenant @relation(fields: [tenantId], references: [id], map: "Consignment_tenantId_fkey")
+
+  @@index([tenantId], map: "Consignment_tenantId_fkey")
+}
+
+model containerquote {
+  id       String @id
+  tenantId String
+  tenant   tenant @relation(fields: [tenantId], references: [id], map: "ContainerQuote_tenantId_fkey")
+
+  @@index([tenantId], map: "ContainerQuote_tenantId_fkey")
+}
+
+model containerrule {
+  id             String  @id
+  tenantId       String
+  type           String
+  maxCbm         Decimal @db.Decimal(6, 2)
+  maxUnits       Int
+  baseFreightUsd Decimal @db.Decimal(12, 2)
+  tenant         tenant  @relation(fields: [tenantId], references: [id], map: "ContainerRule_tenantId_fkey")
+
+  @@index([tenantId], map: "ContainerRule_tenantId_fkey")
+}
+
+model countryguide {
+  id           String   @id
+  tenantId     String
+  countryCode  String
+  slug         String
+  title        String
+  sectionsJson Json
+  faqJson      Json
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  tenant       tenant   @relation(fields: [tenantId], references: [id], map: "CountryGuide_tenantId_fkey")
+
+  @@index([tenantId], map: "CountryGuide_tenantId_fkey")
+}
+
+model customdomain {
+  id       String @id
+  tenantId String
+  hostname String @unique(map: "CustomDomain_hostname_key")
+  tenant   tenant @relation(fields: [tenantId], references: [id], map: "CustomDomain_tenantId_fkey")
+
+  @@index([tenantId], map: "CustomDomain_tenantId_fkey")
+}
+
+model customer {
+  id        String   @id
+  tenantId  String
+  name      String
+  email     String?
+  phone     String?
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  tenant    tenant   @relation(fields: [tenantId], references: [id], map: "Customer_tenantId_fkey")
+  sales     sales[]
+
+  @@index([tenantId], map: "Customer_tenantId_fkey")
+}
+
+model dealerreview {
+  id       String @id
+  tenantId String
+  buyerId  String
+  buyers   buyers @relation(fields: [buyerId], references: [id], map: "DealerReview_buyerId_fkey")
+  tenant   tenant @relation(fields: [tenantId], references: [id], map: "DealerReview_tenantId_fkey")
+
+  @@index([buyerId], map: "DealerReview_buyerId_fkey")
+  @@index([tenantId], map: "DealerReview_tenantId_fkey")
+}
+
+model entitlements {
+  tenantId    String   @id
+  modulesJson Json
+  updatedAt   DateTime
+  tenant      tenant   @relation(fields: [tenantId], references: [id], map: "Entitlements_tenantId_fkey")
+}
+
+model escrowpayment {
+  id       String  @id
+  tenantId String
+  buyerId  String
+  amount   Decimal @db.Decimal(12, 2)
+  status   String  @default("PENDING")
+  buyers   buyers  @relation(fields: [buyerId], references: [id], map: "EscrowPayment_buyerId_fkey")
+  tenant   tenant  @relation(fields: [tenantId], references: [id], map: "EscrowPayment_tenantId_fkey")
+
+  @@index([buyerId], map: "EscrowPayment_buyerId_fkey")
+  @@index([tenantId], map: "EscrowPayment_tenantId_fkey")
+}
+
+model exportport {
+  id              String            @id
+  tenantId        String
+  name            String
+  country         String?
+  tenant          tenant            @relation(fields: [tenantId], references: [id], map: "ExportPort_tenantId_fkey")
+  exportpricerule exportpricerule[]
+
+  @@index([tenantId], map: "ExportPort_tenantId_fkey")
+}
+
+model exportpricerule {
+  id               String     @id
+  tenantId         String
+  portId           String
+  baseUsd          Decimal    @db.Decimal(12, 2)
+  freightUsd       Decimal    @db.Decimal(12, 2)
+  insuranceRatePct Decimal    @db.Decimal(5, 2)
+  exportport       exportport @relation(fields: [portId], references: [id], map: "ExportPriceRule_portId_fkey")
+  tenant           tenant     @relation(fields: [tenantId], references: [id], map: "ExportPriceRule_tenantId_fkey")
+
+  @@index([portId], map: "ExportPriceRule_portId_fkey")
+  @@index([tenantId], map: "ExportPriceRule_tenantId_fkey")
+}
+
+model favorites {
+  id        String   @id
+  buyerId   String
+  carId     String
+  tenantId  String?
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+  buyers    buyers   @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  car       car      @relation(fields: [carId], references: [id], onDelete: Cascade)
+  tenant    tenant?  @relation(fields: [tenantId], references: [id])
+
+  @@unique([buyerId, carId])
+  @@index([buyerId])
+  @@index([carId])
+  @@index([tenantId], map: "favorites_tenantId_fkey")
+}
+
+model fxsetting {
+  id           String   @id
+  tenantId     String   @unique(map: "FxSetting_tenantId_key")
+  usdToLocal   Decimal? @db.Decimal(12, 4)
+  minMarginPct Decimal? @db.Decimal(5, 2)
+  tenant       tenant   @relation(fields: [tenantId], references: [id], map: "FxSetting_tenantId_fkey")
+}
+
+model garageentry {
+  id          String   @id
+  tenantId    String
+  buyerId     String
+  carId       String?
+  userCarJson Json?
+  note        String?
+  createdAt   DateTime @default(now())
+  buyers      buyers   @relation(fields: [buyerId], references: [id], map: "GarageEntry_buyerId_fkey")
+  car         car?     @relation(fields: [carId], references: [id], map: "GarageEntry_carId_fkey")
+  tenant      tenant   @relation(fields: [tenantId], references: [id], map: "GarageEntry_tenantId_fkey")
+
+  @@index([buyerId], map: "GarageEntry_buyerId_fkey")
+  @@index([carId], map: "GarageEntry_carId_fkey")
+  @@index([tenantId, buyerId], map: "GarageEntry_tenantId_buyerId_idx")
+}
+
+model hold {
+  id        String   @id
+  tenantId  String
+  carId     String
+  buyerId   String
+  amountUsd Decimal  @db.Decimal(12, 2)
+  expiresAt DateTime
+  status    String   @default("active")
+  buyers    buyers   @relation(fields: [buyerId], references: [id], map: "Hold_buyerId_fkey")
+  car       car      @relation(fields: [carId], references: [id], map: "Hold_carId_fkey")
+  tenant    tenant   @relation(fields: [tenantId], references: [id], map: "Hold_tenantId_fkey")
+
+  @@index([buyerId], map: "Hold_buyerId_fkey")
+  @@index([carId], map: "Hold_carId_fkey")
+  @@index([tenantId], map: "Hold_tenantId_fkey")
+}
+
+model hqnotification {
+  id       String @id
+  tenantId String
+  tenant   tenant @relation(fields: [tenantId], references: [id], map: "HqNotification_tenantId_fkey")
+
+  @@index([tenantId], map: "HqNotification_tenantId_fkey")
+}
+
+model inquiry {
+  id    String @id
+  carId String
+  car   car    @relation(fields: [carId], references: [id], map: "Inquiry_carId_fkey")
+
+  @@index([carId], map: "Inquiry_carId_fkey")
+}
+
+model inspection {
+  id       String @id
+  tenantId String
+  carId    String
+  status   String @default("PENDING")
+  car      car    @relation(fields: [carId], references: [id], map: "Inspection_carId_fkey")
+  tenant   tenant @relation(fields: [tenantId], references: [id], map: "Inspection_tenantId_fkey")
+
+  @@index([carId], map: "Inspection_carId_fkey")
+  @@index([tenantId], map: "Inspection_tenantId_fkey")
+}
+
+model invoice {
+  id       String @id
+  tenantId String
+  tenant   tenant @relation(fields: [tenantId], references: [id], map: "Invoice_tenantId_fkey")
+
+  @@index([tenantId], map: "Invoice_tenantId_fkey")
+}
+
+model lead {
+  id           String   @id
+  tenantId     String
+  carId        String?
+  assignedToId String?
+  name         String
+  email        String?
+  phone        String?
+  budget       Decimal? @db.Decimal(12, 2)
+  status       String   @default("NEW")
+  source       String?
+  message      String?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime
+  agents       agents?  @relation(fields: [assignedToId], references: [id], map: "Lead_assignedToId_fkey")
+  car          car?     @relation(fields: [carId], references: [id], map: "Lead_carId_fkey")
+  tenant       tenant   @relation(fields: [tenantId], references: [id], map: "Lead_tenantId_fkey")
+
+  @@index([assignedToId], map: "Lead_assignedToId_fkey")
+  @@index([carId], map: "Lead_carId_fkey")
+  @@index([tenantId], map: "Lead_tenantId_fkey")
+}
+
+model loyaltyaccount {
+  id           String         @id
+  tenantId     String
+  buyerId      String
+  points       Int            @default(0)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime
+  buyers       buyers         @relation(fields: [buyerId], references: [id], map: "LoyaltyAccount_buyerId_fkey")
+  tenant       tenant         @relation(fields: [tenantId], references: [id], map: "LoyaltyAccount_tenantId_fkey")
+  loyaltyevent loyaltyevent[]
+
+  @@unique([tenantId, buyerId], map: "LoyaltyAccount_tenantId_buyerId_key")
+  @@index([buyerId], map: "LoyaltyAccount_buyerId_fkey")
+}
+
+model loyaltyevent {
+  id             String         @id
+  tenantId       String
+  buyerId        String
+  type           String
+  points         Int
+  refType        String?
+  refId          String?
+  createdAt      DateTime       @default(now())
+  buyers         buyers         @relation(fields: [buyerId], references: [id], map: "LoyaltyEvent_buyerId_fkey")
+  loyaltyaccount loyaltyaccount @relation(fields: [tenantId, buyerId], references: [tenantId, buyerId], map: "LoyaltyEvent_tenantId_buyerId_fkey")
+  tenant         tenant         @relation(fields: [tenantId], references: [id], map: "LoyaltyEvent_tenantId_fkey")
+
+  @@index([buyerId], map: "LoyaltyEvent_buyerId_fkey")
+  @@index([tenantId, buyerId], map: "LoyaltyEvent_tenantId_buyerId_idx")
+}
+
+model merchants {
+  id                String   @id
+  tenantId          String
+  businessName      String
+  contactEmail      String
+  contactPhone      String?
+  businessAddress   String?
+  taxId             String?
+  bankDetails       Json?
+  commissionPercent Decimal  @default(5.00) @db.Decimal(5, 2)
+  status            String   @default("active")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime
+  tenant            tenant   @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId], map: "merchants_tenantId_fkey")
+}
+
+model mobilepayment {
+  id              String   @id
+  tenantId        String
+  msisdn          String
+  provider        String
+  amount          Decimal  @db.Decimal(12, 2)
+  currency        String   @default("ZMW")
+  status          String   @default("pending")
+  external_ref    String?
+  request_id      String?  @unique(map: "MobilePayment_request_id_key")
+  idempotency_key String?  @unique(map: "MobilePayment_idempotency_key_key")
+  metaJson        Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime
+  tenant          tenant   @relation(fields: [tenantId], references: [id], map: "MobilePayment_tenantId_fkey")
+
+  @@index([tenantId], map: "MobilePayment_tenantId_fkey")
+}
+
+model one_time_codes {
+  id        String   @id
+  contact   String
+  code      String
+  type      String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([contact])
+  @@index([expiresAt])
+}
+
+model orders {
+  id                String               @id
+  orderNumber       String               @unique
+  buyerId           String
+  tenantId          String
+  carId             String
+  carPrice          Decimal              @db.Decimal(12, 2)
+  shippingCost      Decimal?             @db.Decimal(12, 2)
+  insuranceCost     Decimal?             @db.Decimal(12, 2)
+  totalAmount       Decimal              @db.Decimal(12, 2)
+  currency          String               @default("USD")
+  paymentStatus     orders_paymentStatus @default(PENDING)
+  paymentMethod     String?
+  downPayment       Decimal?             @db.Decimal(12, 2)
+  shippingAddress   Json?
+  shippingMethod    String?
+  estimatedDelivery DateTime?
+  status            orders_status        @default(PENDING)
+  notes             String?              @db.Text
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime
+  buyer_reviews     buyer_reviews[]
+  buyers            buyers               @relation(fields: [buyerId], references: [id])
+  car               car                  @relation(fields: [carId], references: [id])
+  tenant            tenant               @relation(fields: [tenantId], references: [id])
+
+  @@index([buyerId, status])
+  @@index([carId], map: "orders_carId_fkey")
+  @@index([orderNumber])
+  @@index([tenantId, status])
+}
+
+model part {
+  id       String @id
+  tenantId String
+  tenant   tenant @relation(fields: [tenantId], references: [id], map: "Part_tenantId_fkey")
+
+  @@index([tenantId], map: "Part_tenantId_fkey")
+}
+
+model partcategory {
+  id       String @id
+  tenantId String
+  tenant   tenant @relation(fields: [tenantId], references: [id], map: "PartCategory_tenantId_fkey")
+
+  @@index([tenantId], map: "PartCategory_tenantId_fkey")
+}
+
+model payment {
+  id              String           @id
+  tenantId        String
+  ref             String           @unique(map: "Payment_ref_key")
+  carId           String?
+  proformaId      String?
+  buyerId         String?
+  agentId         String?
+  method          String
+  currency        String
+  amount          Decimal          @db.Decimal(12, 2)
+  proofUrl        String?
+  status          String
+  receivedAt      DateTime?
+  hash            String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime
+  agents          agents?          @relation(fields: [agentId], references: [id], map: "Payment_agentId_fkey")
+  buyers          buyers?          @relation(fields: [buyerId], references: [id], map: "Payment_buyerId_fkey")
+  car             car?             @relation(fields: [carId], references: [id], map: "Payment_carId_fkey")
+  proformainvoice proformainvoice? @relation(fields: [proformaId], references: [id], map: "Payment_proformaId_fkey")
+  tenant          tenant           @relation(fields: [tenantId], references: [id], map: "Payment_tenantId_fkey")
+  receipts        receipts[]
+
+  @@index([agentId], map: "Payment_agentId_fkey")
+  @@index([buyerId], map: "Payment_buyerId_fkey")
+  @@index([carId], map: "Payment_carId_fkey")
+  @@index([proformaId], map: "Payment_proformaId_idx")
+  @@index([ref], map: "Payment_ref_idx")
+  @@index([tenantId], map: "Payment_tenantId_fkey")
+}
+
+model paymentintent {
+  id              String           @id
+  tenantId        String
+  buyerId         String?
+  proformaId      String?
+  amount          Decimal          @db.Decimal(10, 2)
+  provider        String
+  currency        String           @default("USD")
+  status          String           @default("requires_action")
+  clientSecret    String?
+  providerMeta    Json?
+  metaJson        Json?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime
+  buyers          buyers?          @relation(fields: [buyerId], references: [id], map: "PaymentIntent_buyerId_fkey")
+  proformainvoice proformainvoice? @relation(fields: [proformaId], references: [id], map: "PaymentIntent_proformaId_fkey")
+  tenant          tenant           @relation(fields: [tenantId], references: [id], map: "PaymentIntent_tenantId_fkey")
+
+  @@index([buyerId], map: "PaymentIntent_buyerId_fkey")
+  @@index([proformaId], map: "PaymentIntent_proformaId_fkey")
+  @@index([tenantId], map: "PaymentIntent_tenantId_fkey")
+}
+
+model paymentinvoice {
+  id       String @id
+  tenantId String
+  tenant   tenant @relation(fields: [tenantId], references: [id], map: "PaymentInvoice_tenantId_fkey")
+
+  @@index([tenantId], map: "PaymentInvoice_tenantId_fkey")
+}
+
+model paymentproof {
+  id       String @id
+  tenantId String
+  rejectionReason String?
+  tenant   tenant @relation(fields: [tenantId], references: [id], map: "PaymentProof_tenantId_fkey")
+
+  @@index([tenantId], map: "PaymentProof_tenantId_fkey")
+}
+
+model paymentprovider {
+  tenantId     String   @id
+  providerJson Json
+  updatedAt    DateTime
+  tenant       tenant   @relation(fields: [tenantId], references: [id], map: "PaymentProvider_tenantId_fkey")
+}
+
+model payoutbankaccount {
+  id       String @id
+  tenantId String
+  tenant   tenant @relation(fields: [tenantId], references: [id], map: "PayoutBankAccount_tenantId_fkey")
+
+  @@index([tenantId], map: "PayoutBankAccount_tenantId_fkey")
+}
+
+model payoutmobilewallet {
+  id       String @id
+  tenantId String
+  tenant   tenant @relation(fields: [tenantId], references: [id], map: "PayoutMobileWallet_tenantId_fkey")
+
+  @@index([tenantId], map: "PayoutMobileWallet_tenantId_fkey")
+}
+
+model proformainvoice {
+  id                String              @id
+  tenantId          String
+  carId             String
+  buyerId           String?
+  agentId           String?
+  userId            String?
+  proformaNo        String              @unique(map: "ProformaInvoice_proformaNo_key")
+  amount            Decimal             @db.Decimal(12, 2)
+  total             Decimal?            @db.Decimal(12, 2)
+  lineItemsJson     Json?
+  status            String              @default("DRAFT")
+  currency          String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime
+  payment           payment[]
+  paymentintent     paymentintent[]
+  agents            agents?             @relation(fields: [agentId], references: [id], map: "ProformaInvoice_agentId_fkey")
+  buyers            buyers?             @relation(fields: [buyerId], references: [id], map: "ProformaInvoice_buyerId_fkey")
+  car               car                 @relation(fields: [carId], references: [id], map: "ProformaInvoice_carId_fkey")
+  tenant            tenant              @relation(fields: [tenantId], references: [id], map: "ProformaInvoice_tenantId_fkey")
+  user              user?               @relation(fields: [userId], references: [id], map: "ProformaInvoice_userId_fkey")
+  warrantyselection warrantyselection[]
+
+  @@index([agentId], map: "ProformaInvoice_agentId_fkey")
+  @@index([buyerId], map: "ProformaInvoice_buyerId_fkey")
+  @@index([carId], map: "ProformaInvoice_carId_fkey")
+  @@index([tenantId], map: "ProformaInvoice_tenantId_fkey")
+  @@index([userId], map: "ProformaInvoice_userId_fkey")
+}
+
+model promocode {
+  id        String   @id
+  code      String   @unique(map: "PromoCode_code_key")
+  type      String
+  value     Int
+  currency  String   @default("ZMW")
+  expiresAt DateTime
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+}
+
+model promotionbanner {
+  id       String @id
+  tenantId String
+  tenant   tenant @relation(fields: [tenantId], references: [id], map: "PromotionBanner_tenantId_fkey")
+
+  @@index([tenantId], map: "PromotionBanner_tenantId_fkey")
+}
+
+model pushsubscription {
+  id       String @id
+  tenantId String
+  tenant   tenant @relation(fields: [tenantId], references: [id], map: "PushSubscription_tenantId_fkey")
+
+  @@index([tenantId], map: "PushSubscription_tenantId_fkey")
+}
+
+model quote {
+  id         String   @id
+  tenantId   String
+  carId      String
+  quoteNo    String   @unique(map: "Quote_quoteNo_key")
+  amount     Decimal  @db.Decimal(12, 2)
+  validUntil DateTime
+  status     String   @default("DRAFT")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime
+  car        car      @relation(fields: [carId], references: [id], map: "Quote_carId_fkey")
+  tenant     tenant   @relation(fields: [tenantId], references: [id], map: "Quote_tenantId_fkey")
+
+  @@index([carId], map: "Quote_carId_fkey")
+  @@index([tenantId], map: "Quote_tenantId_fkey")
+}
+
+model receipts {
+  id          String   @id
+  paymentId   String
+  message     String
+  channel     String
+  deliveredAt DateTime
+  createdAt   DateTime @default(now())
+  payment     payment  @relation(fields: [paymentId], references: [id])
+
+  @@index([paymentId])
+}
+
+model referrals {
+  id             String           @id
+  agentId        String
+  tenantId       String
+  referralCode   String           @unique
+  customerEmail  String
+  customerName   String
+  customerPhone  String?
+  carId          String?
+  status         referrals_status @default(PENDING)
+  source         String           @default("DIRECT")
+  convertedAt    DateTime?
+  saleId         String?          @unique
+  commissionRate Decimal          @default(0.00) @db.Decimal(5, 2)
+  commissionPaid Boolean          @default(false)
+  metadata       Json?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime
+  agents         agents           @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  car            car?             @relation(fields: [carId], references: [id])
+  sales          sales?           @relation(fields: [saleId], references: [id])
+  tenant         tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([agentId, status])
+  @@index([carId], map: "referrals_carId_fkey")
+  @@index([customerEmail])
+  @@index([tenantId, status])
+}
+
+model refreshtoken {
+  id        String   @id
+  userId    String
+  tokenHash String   @unique(map: "RefreshToken_tokenHash_key")
+  revoked   Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      user     @relation(fields: [userId], references: [id], map: "RefreshToken_userId_fkey")
+
+  @@index([userId], map: "RefreshToken_userId_fkey")
+}
+
+model review {
+  id       String  @id
+  tenantId String
+  carId    String
+  buyerId  String
+  rating   Int
+  comment  String?
+  buyers   buyers  @relation(fields: [buyerId], references: [id], map: "Review_buyerId_fkey")
+  car      car     @relation(fields: [carId], references: [id], map: "Review_carId_fkey")
+  tenant   tenant  @relation(fields: [tenantId], references: [id], map: "Review_tenantId_fkey")
+
+  @@index([buyerId], map: "Review_buyerId_fkey")
+  @@index([carId], map: "Review_carId_fkey")
+  @@index([tenantId], map: "Review_tenantId_fkey")
+}
+
+model sales {
+  id            String              @id
+  tenantId      String
+  saleNumber    String              @unique
+  customerId    String
+  carId         String
+  agentId       String?
+  salePrice     Decimal             @db.Decimal(12, 2)
+  downPayment   Decimal             @default(0.00) @db.Decimal(12, 2)
+  financing     Boolean             @default(false)
+  status        sales_status        @default(PENDING)
+  paymentStatus sales_paymentStatus @default(PENDING)
+  saleDate      DateTime            @default(now())
+  deliveryDate  DateTime?
+  notes         String?             @db.Text
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime
+  commissions   commissions[]
+  referrals     referrals?
+  agents        agents?             @relation(fields: [agentId], references: [id])
+  car           car                 @relation(fields: [carId], references: [id])
+  customer      customer            @relation(fields: [customerId], references: [id])
+  tenant        tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([agentId])
+  @@index([carId], map: "sales_carId_fkey")
+  @@index([customerId])
+  @@index([tenantId, status])
+}
+
+model saved_searches {
+  id           String    @id
+  buyerId      String?
+  tenantId     String
+  name         String?
+  filters      Json?
+  queryJson    Json?
+  alertEnabled Boolean   @default(false)
+  lastAlertAt  DateTime?
+  email        String?
+  phone        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime
+  buyers       buyers?   @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  tenant       tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([buyerId])
+  @@index([tenantId])
+}
+
+model servicejob {
+  id       String @id
+  tenantId String
+  status   String @default("PENDING")
+  tenant   tenant @relation(fields: [tenantId], references: [id], map: "ServiceJob_tenantId_fkey")
+
+  @@index([tenantId], map: "ServiceJob_tenantId_fkey")
+}
+
+model shipment {
+  id               String             @id
+  tenantId         String
+  carId            String
+  buyerId          String?
+  status           String             @default("PENDING")
+  docsJson         Json?
+  buyers           buyers?            @relation(fields: [buyerId], references: [id], map: "Shipment_buyerId_fkey")
+  car              car                @relation(fields: [carId], references: [id], map: "Shipment_carId_fkey")
+  tenant           tenant             @relation(fields: [tenantId], references: [id], map: "Shipment_tenantId_fkey")
+  shippingtimeline shippingtimeline[]
+
+  @@index([buyerId], map: "Shipment_buyerId_fkey")
+  @@index([carId], map: "Shipment_carId_fkey")
+  @@index([tenantId], map: "Shipment_tenantId_fkey")
+}
+
+model shippingestimatelog {
+  id       String @id
+  tenantId String
+  tenant   tenant @relation(fields: [tenantId], references: [id], map: "ShippingEstimateLog_tenantId_fkey")
+
+  @@index([tenantId], map: "ShippingEstimateLog_tenantId_fkey")
+}
+
+model shippingrate {
+  id       String @id
+  tenantId String
+  tenant   tenant @relation(fields: [tenantId], references: [id], map: "ShippingRate_tenantId_fkey")
+
+  @@index([tenantId], map: "ShippingRate_tenantId_fkey")
+}
+
+model shippingtimeline {
+  id         String   @id
+  tenantId   String
+  shipmentId String
+  statusKey  String
+  happenedAt DateTime @default(now())
+  note       String?
+  shipment   shipment @relation(fields: [shipmentId], references: [id], map: "ShippingTimeline_shipmentId_fkey")
+  tenant     tenant   @relation(fields: [tenantId], references: [id], map: "ShippingTimeline_tenantId_fkey")
+
+  @@index([shipmentId], map: "ShippingTimeline_shipmentId_fkey")
+  @@index([tenantId], map: "ShippingTimeline_tenantId_fkey")
+}
+
+model staffprofile {
+  id     String  @id
+  userId String  @unique(map: "StaffProfile_userId_key")
+  title  String?
+  user   user    @relation(fields: [userId], references: [id], map: "StaffProfile_userId_fkey")
+}
+
+model temporaryregistration {
+  id                   String   @id
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime
+  status               String   @default("PENDING")
+  businessName         String
+  country              String
+  city                 String
+  businessType         String
+  website              String?
+  contactName          String
+  contactEmail         String
+  contactPhone         String
+  expectedListings     Int
+  expectedSales        Int?
+  staffCount           Int
+  branchCount          Int
+  requiredModulesJson  Json
+  themePreset          String
+  logoUrl              String?
+  primaryColor         String?
+  promoCode            String?
+  trialRequested       Boolean  @default(false)
+  pricingBreakdownJson Json
+  paymentMethod        String
+  momoProvider         String?
+  paymentProofUrl      String?
+}
+
+model tenant {
+    id                   String                 @id
+    name                 String
+    slug                 String                 @unique(map: "Tenant_slug_key")
+    theme                Json?
+  settings             Json?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime
+  affiliate            affiliate[]
+  affiliateclick       affiliateclick[]
+  affiliatepayout      affiliatepayout[]
+  agentactivitylog     agentactivitylog[]
+  agentdeal            agentdeal[]
+  agents               agents[]
+  appointment          appointment[]
+  auditlog             auditlog[]
+  backgroundjob        backgroundjob[]
+  billing_entitlements billing_entitlements[]
+  billingaccount       billingaccount?
+  billingsubscription  billingsubscription[]
+  branch               branch[]
+  buyer_inquiries      buyer_inquiries[]
+  buyer_reviews        buyer_reviews[]
+  buyers               buyers[]
+  campaign             campaign[]
+  car                  car[]
+  cardimension         cardimension[]
+  carmedia             carmedia[]
+  cifcalculation       cifcalculation[]
+  cifoverride          cifoverride[]
+  commissions          commissions[]
+  commissionstatement  commissionstatement[]
+  consignment          consignment[]
+  containerquote       containerquote[]
+  containerrule        containerrule[]
+  countryguide         countryguide[]
+  customdomain         customdomain[]
+  customer             customer[]
+  dealerreview         dealerreview[]
+  entitlements         entitlements?
+  escrowpayment        escrowpayment[]
+  exportport           exportport[]
+  exportpricerule      exportpricerule[]
+  favorites            favorites[]
+  fxsetting            fxsetting?
+  garageentry          garageentry[]
+  hold                 hold[]
+  hqnotification       hqnotification[]
+  inspection           inspection[]
+  invoice              invoice[]
+  lead                 lead[]
+  loyaltyaccount       loyaltyaccount[]
+  loyaltyevent         loyaltyevent[]
+  merchants            merchants[]
+  mobilepayment        mobilepayment[]
+  orders               orders[]
+  part                 part[]
+  partcategory         partcategory[]
+  payment              payment[]
+  paymentintent        paymentintent[]
+  paymentinvoice       paymentinvoice[]
+  paymentproof         paymentproof[]
+  paymentprovider      paymentprovider?
+  payoutbankaccount    payoutbankaccount[]
+  payoutmobilewallet   payoutmobilewallet[]
+  proformainvoice      proformainvoice[]
+  promotionbanner      promotionbanner[]
+  pushsubscription     pushsubscription[]
+  quote                quote[]
+  referrals            referrals[]
+  review               review[]
+  sales                sales[]
+  saved_searches       saved_searches[]
+  servicejob           servicejob[]
+  shipment             shipment[]
+  shippingestimatelog  shippingestimatelog[]
+    shippingrate         shippingrate[]
+    shippingtimeline     shippingtimeline[]
+    tenantsubscription   tenantsubscription[]
+    tenanttheme          tenanttheme?
+    testdrive            testdrive[]
+    aiSettings           tenantAiSettings?
+    aiInteractions       aiInteraction[]
+      aiCreditPurchases    aiCreditPurchase[]
+      aiUsage              tenantAiUsage[]
+      themeRecords         theme[]
+      promptTemplates      promptTemplate[]
+      networkMembership    networkMembership?
+      dealerVerification   dealerVerification?
+      aiPriceRecommendations aiPriceRecommendation[]
+      financingApplications  financingApplication[]
+    tradein              tradein[]
+  usagemeter           usagemeter[]
+  user                 user[]
+  ussdaudit            ussdaudit[]
+  ussdcart             ussdcart[]
+  ussdchannel          ussdchannel[]
+  ussdsession          ussdsession[]
+  warrantyselection    warrantyselection[]
+  watchlist            watchlist[]
+  webhookevent         webhookevent[]
+}
+
+model tenantsubscription {
+  id       String @id
+  tenantId String
+  tenant   tenant @relation(fields: [tenantId], references: [id], map: "TenantSubscription_tenantId_fkey")
+
+  @@index([tenantId], map: "TenantSubscription_tenantId_fkey")
+}
+
+model tenanttheme {
+  id       String @id
+  tenantId String @unique(map: "TenantTheme_tenantId_key")
+  tenant   tenant @relation(fields: [tenantId], references: [id], map: "TenantTheme_tenantId_fkey")
+}
+
+model testdrive {
+  id         String   @id
+  tenantId   String
+  carId      String?
+  name       String
+  phone      String
+  email      String?
+  scheduleAt DateTime
+  message    String?
+  status     String   @default("requested")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime
+  car        car?     @relation(fields: [carId], references: [id], map: "TestDrive_carId_fkey")
+  tenant     tenant   @relation(fields: [tenantId], references: [id], map: "TestDrive_tenantId_fkey")
+
+  @@index([carId], map: "TestDrive_carId_fkey")
+  @@index([tenantId], map: "TestDrive_tenantId_fkey")
+}
+
+model theme {
+  id       String @id
+  tenantId String
+  tenant   tenant @relation(fields: [tenantId], references: [id], map: "Theme_tenantId_fkey")
+
+  @@index([tenantId], map: "Theme_tenantId_fkey")
+}
+
+model tradein {
+  id       String @id
+  tenantId String
+  carId    String
+  status   String @default("PENDING")
+  car      car    @relation(fields: [carId], references: [id], map: "TradeIn_carId_fkey")
+  tenant   tenant @relation(fields: [tenantId], references: [id], map: "TradeIn_tenantId_fkey")
+
+  @@index([carId], map: "TradeIn_carId_fkey")
+  @@index([tenantId], map: "TradeIn_tenantId_fkey")
+}
+
+model usagemeter {
+  id          String   @id
+  tenantId    String
+  meterKey    String
+  qty         Int      @default(0)
+  windowStart DateTime
+  windowEnd   DateTime
+  updatedAt   DateTime
+  tenant      tenant   @relation(fields: [tenantId], references: [id], map: "UsageMeter_tenantId_fkey")
+
+  @@unique([tenantId, meterKey, windowStart, windowEnd], map: "UsageMeter_tenantId_meterKey_windowStart_windowEnd_key")
+  @@index([tenantId, meterKey], map: "UsageMeter_tenantId_meterKey_idx")
+}
+
+model user {
+  id              String            @id
+  tenantId        String?
+  email           String            @unique(map: "User_email_key")
+  passwordHash    String
+  name            String?
+  role            String
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime
+  agents          agents?
+  buyer_inquiries buyer_inquiries[]
+  cifcalculation  cifcalculation[]
+  proformainvoice proformainvoice[]
+  refreshtoken    refreshtoken[]
+  staffprofile    staffprofile?
+  tenant          tenant?           @relation(fields: [tenantId], references: [id], map: "User_tenantId_fkey")
+
+  @@index([tenantId], map: "User_tenantId_fkey")
+}
+
+model ussdaudit {
+  id         String   @id
+  tenantId   String
+  msisdnHash String
+  event      String
+  dataJson   Json?
+  createdAt  DateTime @default(now())
+  tenant     tenant   @relation(fields: [tenantId], references: [id], map: "UssdAudit_tenantId_fkey")
+
+  @@index([tenantId], map: "UssdAudit_tenantId_fkey")
+}
+
+model ussdcart {
+  id            String       @id
+  tenantId      String
+  sessionId     String?
+  msisdn        String
+  stockNo       String
+  variantJson   Json?
+  holdExpiresAt DateTime?
+  status        String       @default("selecting")
+  createdAt     DateTime     @default(now())
+  ussdsession   ussdsession? @relation(fields: [sessionId], references: [sessionId], map: "UssdCart_sessionId_fkey")
+  tenant        tenant       @relation(fields: [tenantId], references: [id], map: "UssdCart_tenantId_fkey")
+
+  @@index([sessionId], map: "UssdCart_sessionId_fkey")
+  @@index([tenantId], map: "UssdCart_tenantId_fkey")
+}
+
+model ussdchannel {
+  id        String   @id
+  tenantId  String
+  shortcode String   @unique(map: "UssdChannel_shortcode_key")
+  createdAt DateTime @default(now())
+  tenant    tenant   @relation(fields: [tenantId], references: [id], map: "UssdChannel_tenantId_fkey")
+
+  @@index([tenantId], map: "UssdChannel_tenantId_fkey")
+}
+
+model ussdsession {
+  sessionId   String     @id
+  msisdn      String
+  step        String
+  payloadJson Json?
+  tenantId    String
+  lastSeenAt  DateTime
+  ussdcart    ussdcart[]
+  tenant      tenant     @relation(fields: [tenantId], references: [id], map: "UssdSession_tenantId_fkey")
+
+  @@index([tenantId], map: "UssdSession_tenantId_fkey")
+}
+
+model videotour {
+  id    String @id
+  carId String
+  car   car    @relation(fields: [carId], references: [id], map: "VideoTour_carId_fkey")
+
+  @@index([carId], map: "VideoTour_carId_fkey")
+}
+
+model warrantyselection {
+  id              String          @id
+  tenantId        String
+  proformaId      String
+  selected        Boolean         @default(false)
+  addedAmountUsd  Decimal         @default(0.00) @db.Decimal(10, 2)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime
+  proformainvoice proformainvoice @relation(fields: [proformaId], references: [id], map: "WarrantySelection_proformaId_fkey")
+  tenant          tenant          @relation(fields: [tenantId], references: [id], map: "WarrantySelection_tenantId_fkey")
+
+  @@unique([tenantId, proformaId], map: "WarrantySelection_tenantId_proformaId_key")
+  @@index([proformaId], map: "WarrantySelection_proformaId_fkey")
+}
+
+model watchlist {
+  id         String   @id
+  tenantId   String
+  buyerId    String?
+  email      String?
+  phone      String?
+  carId      String
+  alertTypes Json
+  createdAt  DateTime @default(now())
+  buyers     buyers?  @relation(fields: [buyerId], references: [id], map: "Watchlist_buyerId_fkey")
+  car        car      @relation(fields: [carId], references: [id], map: "Watchlist_carId_fkey")
+  tenant     tenant   @relation(fields: [tenantId], references: [id], map: "Watchlist_tenantId_fkey")
+
+  @@index([buyerId], map: "Watchlist_buyerId_fkey")
+  @@index([carId], map: "Watchlist_carId_fkey")
+  @@index([tenantId, carId], map: "watchlist_tenant_car")
+}
+
+model webhookevent {
+  id        String   @id
+  tenantId  String
+  provider  String
+  eventId   String   @unique(map: "WebhookEvent_eventId_key")
+  signature String?
+  payload   Json
+  processed Boolean  @default(false)
+  createdAt DateTime @default(now())
+  tenant    tenant   @relation(fields: [tenantId], references: [id], map: "WebhookEvent_tenantId_fkey")
+
+  @@index([tenantId], map: "WebhookEvent_tenantId_fkey")
+}
+
+// =====================================================
+// AI & SUBSCRIPTION SUPPORT MODELS
+// =====================================================
+
+model planAiConfig {
+  planKey            String @id
+  monthlyRequestLimit Int
+  aiEnabled          Boolean @default(false)
+  advancedTemplates  Boolean @default(false)
+  customTemplates    Boolean @default(false)
+  aiHistoryDays      Int     @default(0)
+  maxContextTokens   Int     @default(0)
+  maxOutputTokens    Int     @default(0)
+}
+
+model tenantAiUsage {
+  id           String   @id @default(uuid())
+  tenantId     String
+  month        DateTime
+  requestCount Int      @default(0)
+  tokenCount   Int      @default(0)
+  tenant       tenant   @relation(fields: [tenantId], references: [id], map: "TenantAiUsage_tenantId_fkey")
+
+  @@unique([tenantId, month], map: "TenantAiUsage_tenantId_month_key")
+  @@index([tenantId], map: "TenantAiUsage_tenantId_idx")
+}
+
+model tenantAiSettings {
+  tenantId     String @id
+  bonusCredits Int   @default(0)
+  tenant       tenant @relation(fields: [tenantId], references: [id], map: "TenantAiSettings_tenantId_fkey")
+}
+
+model promptTemplate {
+  id                 String   @id @default(uuid())
+  tenantId           String?
+  tenant             tenant?  @relation(fields: [tenantId], references: [id], map: "PromptTemplate_tenantId_fkey")
+  department         String
+  name               String
+  description        String?
+  systemPrompt       String   @db.Text
+  userPromptTemplate String   @db.Text
+  variablesJson      Json?
+  category           String?
+  icon               String?
+  isGlobal           Boolean  @default(false)
+  isEnabled          Boolean  @default(true)
+  sortOrder          Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([tenantId], map: "PromptTemplate_tenantId_idx")
+  @@index([department, isEnabled], map: "PromptTemplate_department_enabled_idx")
+  aiInteractions     aiInteraction[]
+}
+
+model aiInteraction {
+  id               String          @id @default(uuid())
+  tenantId         String
+  userId           String
+  templateId       String?
+  department       String
+  promptText       String?         @db.Text
+  responseText     String?         @db.Text
+  promptTokens     Int             @default(0)
+  completionTokens Int             @default(0)
+  model            String
+  success          Boolean         @default(true)
+  errorMessage     String?         @db.Text
+  createdAt        DateTime        @default(now())
+  tenant           tenant          @relation(fields: [tenantId], references: [id], map: "AiInteraction_tenantId_fkey")
+  template         promptTemplate? @relation(fields: [templateId], references: [id], map: "AiInteraction_templateId_fkey")
+
+  @@index([tenantId, createdAt], map: "AiInteraction_tenantId_createdAt_idx")
+}
+
+model aiCreditPurchase {
+  id               String   @id @default(uuid())
+  tenantId         String
+  credits          Int
+  amountPaid       Decimal  @db.Decimal(12, 2)
+  currency         String   @default("ZMW")
+  paymentReference String
+  createdAt        DateTime @default(now())
+  tenant           tenant   @relation(fields: [tenantId], references: [id], map: "AiCreditPurchase_tenantId_fkey")
+
+  @@index([tenantId], map: "AiCreditPurchase_tenantId_idx")
+}
+
+// =====================================================
+// NATIONAL NETWORK, GLOBAL BUYER & FINANCING MODELS
+// =====================================================
+
+enum NetworkMembershipStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  OPTED_OUT
+}
+
+enum NetworkListingStatus {
+  PENDING_REVIEW
+  ACTIVE
+  REJECTED
+  EXPIRED
+  SUSPENDED
+}
+
+enum FeaturedPlacementType {
+  HOMEPAGE_BANNER
+  SEARCH_TOP
+  CATEGORY_FEATURED
+  MAKE_SPOTLIGHT
+  DEAL_OF_DAY
+}
+
+enum BuyerAccountStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum FinancingPartnerStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  INACTIVE
+  PENDING_APPROVAL
+}
+
+enum FinancingApplicationStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  REVIEWING
+  APPROVED
+  REJECTED
+  EXPIRED
+  WITHDRAWN
+  DISBURSED
+  CANCELLED
+}
+
+enum VerificationStatus {
+  UNVERIFIED
+  PENDING
+  UNDER_REVIEW
+  VERIFIED
+  REJECTED
+  SUSPENDED
+  REVOKED
+}
+
+enum VerificationDocType {
+  BUSINESS_REGISTRATION
+  TAX_CERTIFICATE
+  TAX_CLEARANCE
+  TPIN_CERTIFICATE
+  TRADE_LICENSE
+  OWNER_ID
+  BANK_STATEMENT
+  PROOF_OF_ADDRESS
+  UTILITY_BILL
+  OTHER
+}
+
+model networkMembership {
+  id                    String                  @id @default(uuid())
+  tenantId              String                  @unique
+  tenant                tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  status                NetworkMembershipStatus @default(PENDING)
+  joinedAt              DateTime?
+  optedOutAt            DateTime?
+  visibilityRank        Int                     @default(100)
+  commissionRate        Decimal                 @default(0) @db.Decimal(5, 2)
+  agreedTermsAt         DateTime?
+  agreedTermsVersion    String?
+  monthlyLeadsReceived  Int                     @default(0)
+  totalSalesFromNetwork Int                     @default(0)
+  reviewedBy            String?
+  reviewedAt            DateTime?
+  notes                 String?                 @db.Text
+  settings              Json?
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+
+  networkListings   networkListing[]
+  featuredPlacements featuredPlacement[]
+
+  @@index([status], map: "NetworkMembership_status_idx")
+  @@index([visibilityRank], map: "NetworkMembership_visibilityRank_idx")
+  @@map("network_memberships")
+}
+
+model networkListing {
+  id                String               @id @default(uuid())
+  membershipId      String
+  membership        networkMembership    @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  carId             String
+  car               car                  @relation(fields: [carId], references: [id], onDelete: Cascade)
+  status            NetworkListingStatus @default(PENDING_REVIEW)
+  listPrice         Decimal              @db.Decimal(12, 2)
+  currency          String               @default("ZMW")
+  viewCount         Int                  @default(0)
+  inquiryCount      Int                  @default(0)
+  favoriteCount     Int                  @default(0)
+  qualityScore      Int?
+  boosted           Boolean              @default(false)
+  boostExpiresAt    DateTime?
+  rejectionReason   String?
+  approvedBy        String?
+  approvedAt        DateTime?
+  expiresAt         DateTime?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  networkInquiries  networkInquiry[]
+
+  @@unique([membershipId, carId], map: "NetworkListing_membershipId_carId_key")
+  @@index([status, qualityScore], map: "NetworkListing_status_qualityScore_idx")
+  @@index([viewCount], map: "NetworkListing_viewCount_idx")
+  @@map("network_listings")
+}
+
+model featuredPlacement {
+  id           String               @id @default(uuid())
+  membershipId String
+  membership   networkMembership    @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  type         FeaturedPlacementType
+  carId        String?
+  startDate    DateTime
+  endDate      DateTime
+  amountPaid   Decimal              @db.Decimal(10, 2)
+  currency     String               @default("ZMW")
+  paymentRef   String?
+  impressions  Int                  @default(0)
+  clicks       Int                  @default(0)
+  conversions  Int                  @default(0)
+  active       Boolean              @default(true)
+  createdAt    DateTime             @default(now())
+
+  @@index([type, startDate, endDate], map: "FeaturedPlacement_type_dates_idx")
+  @@index([active], map: "FeaturedPlacement_active_idx")
+  @@map("featured_placements")
+}
+
+model globalBuyer {
+  id                String             @id @default(uuid())
+  email             String             @unique
+  phone             String?
+  passwordHash      String?
+  fullName          String
+  avatarUrl         String?
+  status            BuyerAccountStatus @default(ACTIVE)
+  emailVerified     Boolean            @default(false)
+  phoneVerified     Boolean            @default(false)
+  preferredCurrency String             @default("ZMW")
+  preferredLanguage String             @default("en")
+  notificationPrefs Json?
+  lastLoginAt       DateTime?
+  lastLoginIp       String?
+  loginCount        Int                @default(0)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  globalFavorites   globalFavorite[]
+  networkInquiries  networkInquiry[]
+  carComparisons    carComparison[]
+  searchHistory     buyerSearchHistory[]
+  priceAlerts       priceAlert[]
+  buyerSessions     buyerSession[]
+  financingApps     financingApplication[]
+
+  @@index([email], map: "GlobalBuyer_email_idx")
+  @@index([phone], map: "GlobalBuyer_phone_idx")
+  @@map("global_buyers")
+}
+
+model buyerSession {
+  id         String      @id @default(uuid())
+  buyerId    String
+  buyer      globalBuyer @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  token      String      @unique
+  ipAddress  String?
+  userAgent  String?     @db.Text
+  deviceType String?
+  expiresAt  DateTime
+  createdAt  DateTime    @default(now())
+
+  @@index([buyerId], map: "BuyerSession_buyerId_idx")
+  @@index([token], map: "BuyerSession_token_idx")
+  @@map("buyer_sessions")
+}
+
+model globalFavorite {
+  id        String      @id @default(uuid())
+  buyerId   String
+  buyer     globalBuyer @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  carId     String
+  car       car         @relation(fields: [carId], references: [id], onDelete: Cascade)
+  tenantId  String
+  notes     String?     @db.Text
+  createdAt DateTime    @default(now())
+
+  @@unique([buyerId, carId], map: "GlobalFavorite_buyerId_carId_key")
+  @@index([buyerId, tenantId], map: "GlobalFavorite_buyer_tenant_idx")
+  @@map("global_favorites")
+}
+
+model carComparison {
+  id        String      @id @default(uuid())
+  buyerId   String
+  buyer     globalBuyer @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  name      String?
+  carIds    Json
+  tenantIds Json
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@index([buyerId], map: "CarComparison_buyerId_idx")
+  @@map("car_comparisons")
+}
+
+model networkInquiry {
+  id              String          @id @default(uuid())
+  buyerId         String
+  buyer           globalBuyer     @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  listingId       String
+  listing         networkListing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  tenantId        String
+  message         String          @db.Text
+  contactMethod   String?
+  status          String          @default("PENDING")
+  respondedAt     DateTime?
+  responseTime    Int?
+  convertedToLead Boolean         @default(false)
+  leadId          String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([buyerId, createdAt], map: "NetworkInquiry_buyerId_createdAt_idx")
+  @@index([tenantId, status], map: "NetworkInquiry_tenantId_status_idx")
+  @@map("network_inquiries")
+}
+
+model buyerSearchHistory {
+  id           String      @id @default(uuid())
+  buyerId      String
+  buyer        globalBuyer @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  searchQuery  String?
+  filters      Json?
+  resultsCount Int?
+  createdAt    DateTime    @default(now())
+
+  @@index([buyerId, createdAt], map: "BuyerSearchHistory_buyerId_createdAt_idx")
+  @@map("buyer_search_history")
+}
+
+model priceAlert {
+  id              String      @id @default(uuid())
+  buyerId         String
+  buyer           globalBuyer @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  carId           String?
+  make            String?
+  model           String?
+  maxPrice        Decimal     @db.Decimal(12, 2)
+  currency        String      @default("ZMW")
+  active          Boolean     @default(true)
+  lastTriggeredAt DateTime?
+  triggerCount    Int         @default(0)
+  createdAt       DateTime    @default(now())
+
+  @@index([buyerId, active], map: "PriceAlert_buyerId_active_idx")
+  @@index([make, model, maxPrice], map: "PriceAlert_make_model_price_idx")
+  @@map("price_alerts")
+}
+
+model marketDataPoint {
+  id            String   @id @default(uuid())
+  make          String
+  model         String
+  year          Int
+  bodyType      String?
+  transmission  String?
+  mileageRange  String?
+  condition     String?
+  avgPriceZmw   Decimal  @db.Decimal(12, 2)
+  avgPriceUsd   Decimal? @db.Decimal(12, 2)
+  minPrice      Decimal  @db.Decimal(12, 2)
+  maxPrice      Decimal  @db.Decimal(12, 2)
+  sampleCount   Int
+  daysToSellAvg Int?
+  demandScore   Int?
+  supplyScore   Int?
+  priceVelocity Decimal? @db.Decimal(5, 2)
+  periodStart   DateTime
+  periodEnd     DateTime
+  region        String?
+  createdAt     DateTime @default(now())
+
+  @@index([make, model, year], map: "MarketDataPoint_make_model_year_idx")
+  @@index([periodStart, periodEnd], map: "MarketDataPoint_period_idx")
+  @@index([demandScore], map: "MarketDataPoint_demand_idx")
+  @@map("market_data_points")
+}
+
+model searchAnalytics {
+  id                 String   @id @default(uuid())
+  make               String?
+  model              String?
+  bodyType           String?
+  minYear            Int?
+  maxYear            Int?
+  minPrice           Decimal? @db.Decimal(12, 2)
+  maxPrice           Decimal? @db.Decimal(12, 2)
+  searchCount        Int      @default(1)
+  resultCount        Int?
+  convertedToInquiry Int      @default(0)
+  date               DateTime @default(now()) @db.Date
+
+  @@index([make, model, date], map: "SearchAnalytics_make_model_date_idx")
+  @@index([date, searchCount], map: "SearchAnalytics_date_searchCount_idx")
+  @@map("search_analytics")
+}
+
+model aiPriceRecommendation {
+  id                  String   @id @default(uuid())
+  tenantId            String
+  tenant              tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  carId               String
+  car                 car      @relation(fields: [carId], references: [id], onDelete: Cascade)
+  currentPrice        Decimal  @db.Decimal(12, 2)
+  recommendedPrice    Decimal  @db.Decimal(12, 2)
+  minRecommended      Decimal  @db.Decimal(12, 2)
+  maxRecommended      Decimal  @db.Decimal(12, 2)
+  confidence          Int
+  pricePosition       String
+  reasonsJson         Json
+  comparablesCount    Int
+  avgDaysToSell       Int?
+  predictedDaysToSell Int?
+  marketTrend         String?
+  lastUpdated         DateTime @default(now())
+  expiresAt           DateTime
+  dismissed           Boolean  @default(false)
+
+  @@unique([carId], map: "AiPriceRecommendation_carId_key")
+  @@index([tenantId, pricePosition], map: "AiPriceRecommendation_tenant_price_idx")
+  @@index([expiresAt], map: "AiPriceRecommendation_expiresAt_idx")
+  @@map("ai_price_recommendations")
+}
+
+model marketInsight {
+  id             String   @id @default(uuid())
+  category       String
+  title          String
+  description    String   @db.Text
+  dataJson       Json?
+  impactScore    Int?
+  actionable     Boolean  @default(true)
+  targetAudience String
+  make           String?
+  model          String?
+  region         String?
+  validFrom      DateTime @default(now())
+  validTo        DateTime
+  viewCount      Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  @@index([category, targetAudience], map: "MarketInsight_category_audience_idx")
+  @@index([validFrom, validTo], map: "MarketInsight_valid_idx")
+  @@map("market_insights")
+}
+
+model financingPartner {
+  id                String                   @id @default(uuid())
+  name              String
+  type              String
+  contactName       String
+  logoUrl           String?                  @map("logo")
+  description       String?                  @db.Text
+  minLoanAmountZmw  Decimal                  @db.Decimal(12, 2) @map("minLoanAmount")
+  maxLoanAmountZmw  Decimal                  @db.Decimal(12, 2) @map("maxLoanAmount")
+  minTermMonths     Int                      @map("minTenureMonths")
+  maxTermMonths     Int                      @map("maxTenureMonths")
+  minInterestRate   Decimal                  @db.Decimal(5, 2) @map("interestRateMin")
+  maxInterestRate   Decimal                  @db.Decimal(5, 2) @map("interestRateMax")
+  processingFee     Decimal?                 @db.Decimal(5, 2)
+  requirements      Json?
+  eligibility       Json?
+  apiEndpoint       String?
+  apiWebhookUrl     String?                  @map("webhookUrl")
+  apiKey            String?
+  apiSecret         String?
+  contactEmail      String?
+  contactPhone      String?
+  status            FinancingPartnerStatus   @default(PENDING)
+  commissionRate    Decimal                  @default(0) @db.Decimal(5, 2)
+  priority          Int                      @default(100)
+  createdAt         DateTime                 @default(now())
+  approvedAt        DateTime?
+  updatedAt         DateTime                 @updatedAt
+
+  applications      financingApplication[]
+
+  @@index([status, priority], map: "FinancingPartner_status_priority_idx")
+  @@map("financing_partners")
+}
+
+model financingApplication {
+  id                   String                     @id @default(uuid())
+  partnerId            String
+  partner              financingPartner           @relation(fields: [partnerId], references: [id])
+  globalBuyerId        String?                    @map("buyerId")
+  globalBuyer          globalBuyer?               @relation(fields: [globalBuyerId], references: [id])
+  tenantId             String
+  tenant               tenant                     @relation(fields: [tenantId], references: [id])
+  carId                String
+  car                  car                        @relation(fields: [carId], references: [id])
+  applicantName        String
+  applicantEmail       String
+  applicantPhone       String
+  applicantNrc         String?
+  employerName         String?
+  employmentStatus     String?
+  monthlyIncome        Decimal?                   @db.Decimal(12, 2)
+  requestedAmount      Decimal                    @db.Decimal(12, 2)
+  requestedTermMonths  Int                        @map("requestedTenure")
+  downPayment          Decimal?                   @db.Decimal(12, 2)
+  documentsJson        Json?
+  status               FinancingApplicationStatus @default(DRAFT)
+  partnerRefNo         String?
+  approvedAmount       Decimal?                   @db.Decimal(12, 2)
+  approvedRate         Decimal?                   @db.Decimal(5, 2)
+  approvedTermMonths   Int?                       @map("approvedTenure")
+  monthlyPayment       Decimal?                   @db.Decimal(12, 2)
+  partnerNotes         String?                    @db.Text @map("notes")
+  rejectionReason      String?
+  approvedAt           DateTime?
+  disbursedAt          DateTime?
+  submittedAt          DateTime?
+  decidedAt            DateTime?
+  expiresAt            DateTime?
+  commissionEarned     Decimal?                   @db.Decimal(10, 2)
+  createdAt            DateTime                   @default(now())
+  updatedAt            DateTime                   @updatedAt
+
+  @@index([partnerId, status], map: "FinancingApplication_partner_status_idx")
+  @@index([tenantId, status], map: "FinancingApplication_tenant_status_idx")
+  @@index([globalBuyerId], map: "FinancingApplication_buyer_idx")
+  @@map("financing_applications")
+}
+
+model dealerVerification {
+  id              String             @id @default(uuid())
+  tenantId        String             @unique
+  tenant          tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  status          VerificationStatus @default(UNVERIFIED)
+  level           String             @default("BASIC")
+  verificationLevel Int              @default(0)
+  badgeType       String?
+  trustScore      Int?
+  totalSales      Int                @default(0)
+  totalReviews    Int                @default(0)
+  avgRating       Decimal?           @db.Decimal(2, 1)
+  disputeCount    Int                @default(0)
+  lastAuditAt     DateTime?
+  verifiedAt      DateTime?
+  verifiedBy      String?
+  expiresAt       DateTime?
+  rejectionReason String?            @db.Text
+  suspendedAt     DateTime?
+  notes           String?            @db.Text
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  documents       verificationDocument[]
+
+  @@index([status], map: "DealerVerification_status_idx")
+  @@index([trustScore], map: "DealerVerification_trustScore_idx")
+  @@map("dealer_verifications")
+}
+
+model verificationDocument {
+  id              String               @id @default(uuid())
+  verificationId  String
+  verification    dealerVerification   @relation(fields: [verificationId], references: [id], onDelete: Cascade)
+  documentType    VerificationDocType  @map("docType")
+  fileName        String
+  documentUrl     String               @map("fileUrl")
+  fileSize        Int?
+  mimeType        String?
+  status          String               @default("PENDING")
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  documentNumber  String?
+  notes           String?              @db.Text
+  reviewNotes     String?              @db.Text
+  rejectionReason String?
+  expiresAt       DateTime?
+  createdAt       DateTime             @default(now())
+
+  @@index([verificationId, documentType], map: "VerificationDocument_verification_docType_idx")
+  @@map("verification_documents")
+}
+
+enum agents_tier {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
+}
+
+enum buyer_inquiries_type {
+  GENERAL
+  CAR_SPECIFIC
+  PRICING
+  FINANCING
+  SHIPPING
+  TECHNICAL
+}
+
+enum commissions_status {
+  PENDING
+  APPROVED
+  PAID
+  DISPUTED
+  CANCELLED
+}
+
+enum referrals_status {
+  PENDING
+  QUALIFIED
+  CONVERTED
+  EXPIRED
+  CANCELLED
+}
+
+enum sales_status {
+  PENDING
+  CONFIRMED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum buyer_inquiries_status {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum orders_paymentStatus {
+  PENDING
+  PARTIAL
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum sales_paymentStatus {
+  PENDING
+  PARTIAL
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum buyer_inquiries_priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum orders_status {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}

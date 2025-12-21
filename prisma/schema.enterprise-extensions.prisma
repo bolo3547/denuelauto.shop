@@ -1,0 +1,184 @@
+// =============================================================================
+// DENUEL AUTO - ENTERPRISE SUBSCRIPTION & AI EXTENSIONS
+// =============================================================================
+// Add these models to schema.prisma or schema-extensions.prisma
+
+// Enhanced Subscription Model (replaces or extends TenantSubscription)
+model TenantSubscriptionV2 {
+  id                    String    @id @default(uuid())
+  tenantId              String    @unique
+  tenant                Tenant    @relation("TenantSubscriptionV2", fields: [tenantId], references: [id])
+  
+  // Plan Details
+  planType              String    // "starter", "growth", "pro", "enterprise"
+  planName              String?   // Display name
+  monthlyPrice          Decimal   @db.Decimal(10, 2)
+  currency              String    @default("ZMW")
+  billingCycle          String    // "monthly", "yearly"
+  
+  // Status & Dates
+  status                String    // "active", "past_due", "cancelled", "trialing"
+  trialEndsAt           DateTime?
+  currentPeriodStart    DateTime
+  currentPeriodEnd      DateTime
+  cancelAtPeriodEnd     Boolean   @default(false)
+  cancelledAt           DateTime?
+  
+  // Limits
+  maxCars               Int       @default(50)
+  maxStaff              Int       @default(3)
+  maxBranches           Int       @default(1)
+  aiRequestsPerMonth    Int       @default(0)
+  
+  // Features (JSON for flexibility)
+  features              Json?     // { "apiAccess": true, "customBranding": true, etc. }
+  
+  // Portal Access (JSON array of enabled portals)
+  enabledPortals        Json?     // ["admin", "sales", "agent"]
+  aiEnabledPortals      Json?     // ["admin", "sales"]
+  
+  // Custom Overrides (for enterprise deals)
+  customLimits          Json?     // Override default limits
+  customFeatures        Json?     // Additional features
+  
+  // Payment
+  paymentMethod         String?   // "mtn_momo", "airtel_money", "card", "bank"
+  paymentProviderRef    String?   // External payment provider reference
+  autoRenewal           Boolean   @default(true)
+  
+  // Metadata
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  
+  // Relations
+  auditLogs             AIAuditLog[]
+  usageRecords          SubscriptionUsageRecord[]
+  
+  @@index([tenantId])
+  @@index([status])
+  @@index([planType])
+}
+
+// AI Audit Log - Track all AI interactions
+model AIAuditLog {
+  id                String    @id @default(uuid())
+  tenantId          String
+  subscriptionId    String?
+  subscription      TenantSubscriptionV2? @relation(fields: [subscriptionId], references: [id])
+  userId            String
+  
+  // Context
+  department        String    // "admin", "sales", "agent", etc.
+  action            String    // "prompt_executed", "quick_action", "rewrite", etc.
+  promptId          String?
+  quickActionId     String?
+  
+  // Input/Output (sensitive data should be masked)
+  inputContext      Json?     // Masked context data
+  outputPreview     String?   @db.Text // First 500 chars of output
+  
+  // Metrics
+  tokensUsed        Int       @default(0)
+  processingTimeMs  Int       @default(0)
+  
+  // Status
+  success           Boolean   @default(true)
+  errorMessage      String?
+  
+  // Metadata
+  ipAddress         String?
+  userAgent         String?
+  createdAt         DateTime  @default(now())
+  
+  @@index([tenantId])
+  @@index([userId])
+  @@index([department])
+  @@index([createdAt])
+  @@index([subscriptionId])
+}
+
+// Usage tracking per period
+model SubscriptionUsageRecord {
+  id                String    @id @default(uuid())
+  tenantId          String
+  subscriptionId    String
+  subscription      TenantSubscriptionV2 @relation(fields: [subscriptionId], references: [id])
+  
+  // Period
+  periodStart       DateTime
+  periodEnd         DateTime
+  
+  // Counts
+  carsCreated       Int       @default(0)
+  staffAdded        Int       @default(0)
+  branchesAdded     Int       @default(0)
+  aiRequestsMade    Int       @default(0)
+  tokensUsed        Int       @default(0)
+  
+  // Peak usage (for analytics)
+  peakCars          Int       @default(0)
+  peakStaff         Int       @default(0)
+  
+  // Metadata
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  @@unique([subscriptionId, periodStart])
+  @@index([tenantId])
+  @@index([periodStart])
+}
+
+// Portal Access Override (for custom enterprise deals)
+model PortalAccessOverride {
+  id                String    @id @default(uuid())
+  tenantId          String
+  portal            String    // "admin", "sales", "agent", etc.
+  enabled           Boolean   @default(true)
+  aiEnabled         Boolean   @default(false)
+  customConfig      Json?     // Portal-specific config overrides
+  expiresAt         DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  @@unique([tenantId, portal])
+  @@index([tenantId])
+}
+
+// AI Prompt Templates (custom per tenant)
+model TenantAIPrompt {
+  id                String    @id @default(uuid())
+  tenantId          String
+  department        String    // Which department this prompt belongs to
+  promptKey         String    // Unique key like "sales_rewrite_reply"
+  name              String
+  description       String?
+  systemPrompt      String    @db.Text
+  userPromptTemplate String?  @db.Text
+  category          String?   // "rewrite", "summarize", "analyze", etc.
+  isActive          Boolean   @default(true)
+  sortOrder         Int       @default(0)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  @@unique([tenantId, promptKey])
+  @@index([tenantId, department])
+}
+
+// =============================================================================
+// MIGRATION NOTES
+// =============================================================================
+// 
+// To apply these changes:
+// 
+// 1. Add these models to your schema.prisma file
+// 
+// 2. Update the Tenant model to include the relation:
+//    TenantSubscriptionV2  TenantSubscriptionV2? @relation("TenantSubscriptionV2")
+// 
+// 3. Run migration:
+//    npx prisma migrate dev --name add_enterprise_subscription
+// 
+// 4. Generate client:
+//    npx prisma generate
+//
+// =============================================================================
