@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { requireTenantRole, AuthenticatedRequest, logAgentActivity } from '../../../../../middleware/tenantAuth';
 import prisma from '../../../../../prismaClient';
 import { z } from 'zod';
+import { notifyAgent, notifyCustomer, NotificationTemplates } from '../../../../../notifications';
 
 const updateLeadSchema = z.object({
   customerName: z.string().min(1).optional(),
@@ -334,18 +335,93 @@ async function handleDeleteLead(req: AuthenticatedRequest, res: NextApiResponse,
 }
 
 async function handleStatusChange(tenantId: string, leadId: string, oldStatus: string, newStatus: string, userId: string) {
-  // TODO: Implement business logic for status changes
-  // - Send notifications
-  // - Update follow-up dates
-  // - Create tasks
-  // - Update metrics
+  // Fetch lead details for notifications
+  const lead = await prisma.lead.findUnique({
+    where: { id: leadId },
+    include: {
+      agent: { select: { id: true, name: true, email: true } },
+      car: { select: { id: true, make: true, model: true, year: true, price: true, stockNo: true } },
+    },
+  });
+
+  if (!lead) return;
+
+  // Notify agent about status change
+  if (lead.agentId) {
+    const notification = NotificationTemplates.leadStatusChanged(lead.customerName, oldStatus, newStatus);
+    await notifyAgent(tenantId, lead.agentId, notification.title, notification.message, {
+      leadId,
+      oldStatus,
+      newStatus,
+    });
+  }
+
+  // Notify customer about status change via email
+  if (lead.customerEmail) {
+    await notifyCustomer(
+      lead.customerEmail,
+      'Update on Your Inquiry',
+      `Hello ${lead.customerName}, we have an update regarding your inquiry. Our team will be in touch with you shortly.`
+    );
+  }
 
   if (newStatus === 'CONVERTED') {
-    // TODO: Create sale record, update agent performance metrics
-    console.log(`Lead ${leadId} converted - implement sale creation logic`);
+    // Create sale record and update agent performance
+    const carInfo = lead.car ? `${lead.car.year} ${lead.car.make} ${lead.car.model}` : 'Vehicle';
+    await logAgentActivity(
+      tenantId,
+      lead.agentId || userId,
+      'LEAD_CONVERTED',
+      `Lead "${lead.customerName}" converted to sale for ${carInfo}`,
+      leadId,
+      { carId: lead.car?.id, stockNo: lead.car?.stockNo }
+    );
+
+    // Update the car status to SOLD if linked
+    if (lead.car?.id) {
+      await prisma.car.update({
+        where: { id: lead.car.id },
+        data: { status: 'SOLD' },
+      }).catch(() => {});
+    }
   } else if (newStatus === 'LOST') {
-    // TODO: Cancel upcoming appointments, update loss reasons
-    console.log(`Lead ${leadId} lost - implement cleanup logic`);
+    // Cancel upcoming appointments for this lead
+    await prisma.appointment.updateMany({
+      where: {
+        leadId,
+        status: { in: ['SCHEDULED', 'CONFIRMED'] },
+      },
+      data: {
+        status: 'CANCELLED',
+        notes: `Auto-cancelled: Lead marked as LOST`,
+        updatedAt: new Date(),
+      },
+    });
+
+    await logAgentActivity(
+      tenantId,
+      lead.agentId || userId,
+      'LEAD_LOST',
+      `Lead "${lead.customerName}" marked as lost`,
+      leadId,
+      { previousStatus: oldStatus }
+    );
+  } else if (newStatus === 'INTERESTED') {
+    // Set follow-up for interested leads
+    await prisma.lead.update({
+      where: { id: leadId },
+      data: {
+        nextFollowUpAt: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // 2 days
+      },
+    });
+  } else if (newStatus === 'CONTACTED') {
+    // Set follow-up for contacted leads
+    await prisma.lead.update({
+      where: { id: leadId },
+      data: {
+        nextFollowUpAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1 day
+      },
+    });
   }
 }
 

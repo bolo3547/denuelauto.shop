@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { requireTenantRole, AuthenticatedRequest, logAgentActivity } from '../../../../middleware/tenantAuth';
 import prisma from '../../../../prismaClient';
 import { z } from 'zod';
+import { notifyAgent, NotificationTemplates } from '../../../../notifications';
 
 // Validation schemas
 const createAgentSchema = z.object({
@@ -202,8 +203,23 @@ async function handleCreateAgent(req: AuthenticatedRequest, res: NextApiResponse
       { email: agent.email, role: agent.role }
     );
 
-    // TODO: Send welcome email to agent
-    // TODO: Create initial onboarding tasks
+    // Send welcome email to agent
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } });
+    const welcomeNotification = NotificationTemplates.agentWelcome(agent.name, tenant?.name || 'Denuel Auto');
+    await notifyAgent(tenantId, agent.id, welcomeNotification.title, welcomeNotification.message, {
+      role: agent.role,
+      portalAccess: validatedData.portalAccess,
+    });
+
+    // Create initial onboarding tasks via activity log
+    await logAgentActivity(
+      tenantId,
+      agent.id,
+      'ONBOARDING_STARTED',
+      `Onboarding started for ${agent.name}: Complete profile, review training materials, connect with team lead`,
+      undefined,
+      { tasks: ['Complete profile', 'Review training materials', 'Connect with team lead', 'Set availability schedule'] }
+    );
 
     return res.status(201).json({
       agent: {
