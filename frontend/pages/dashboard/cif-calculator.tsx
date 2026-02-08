@@ -57,6 +57,11 @@ interface CIFCar {
 }
 
 export default function CIFCalculator() {
+  const getStoredValue = (key: string) => {
+    if (typeof window === 'undefined') return '';
+    return localStorage.getItem(key) || document.cookie.split(';').find(c => c.trim().startsWith(`${key}=`))?.split('=')[1] || '';
+  };
+
   const [calculation, setCalculation] = useState<CIFCalculation>({
     carId: '',
     carValue: 0,
@@ -132,7 +137,7 @@ export default function CIFCalculator() {
     try {
       const response = await fetch('/api/cif/calculations', {
         headers: {
-          'x-tenant-id': typeof window !== 'undefined' ? (localStorage.getItem('tenantId') || document.cookie.split(';').find(c => c.trim().startsWith('tenantId='))?.split('=')[1] || '') : ''
+          'x-tenant-id': getStoredValue('tenantId')
         }
       });
       
@@ -241,8 +246,8 @@ export default function CIFCalculator() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-tenant-id': typeof window !== 'undefined' ? (localStorage.getItem('tenantId') || document.cookie.split(';').find(c => c.trim().startsWith('tenantId='))?.split('=')[1] || '') : '',
-          'x-user-id': typeof window !== 'undefined' ? (localStorage.getItem('userId') || document.cookie.split(';').find(c => c.trim().startsWith('userId='))?.split('=')[1] || '') : ''
+          'x-tenant-id': getStoredValue('tenantId'),
+          'x-user-id': getStoredValue('userId')
         },
         body: JSON.stringify(calculation)
       });
