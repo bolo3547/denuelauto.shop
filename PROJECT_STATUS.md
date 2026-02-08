@@ -158,12 +158,41 @@ Denuel Auto is a **multi-tenant car dealership management SaaS platform** built 
 | Workflow | Trigger | What It Does |
 |----------|---------|--------------|
 | `ci.yml` | Push to main, PRs | MySQL service → Install → Migrate → Generate → Backend tests → Frontend tests |
+| `deploy-vercel.yml` | Push to main (frontend changes), Manual | Deploy Next.js frontend to Vercel |
 | `deploy-ecs.yml` | Push to main | Build Docker → Push to AWS ECR → (Optional DockerHub) |
 | `deploy-ecs-staging.yml` | Manual/staging | Staging ECS deployment |
 | `deploy-gh-pages.yml` | Manual | Static frontend export to GitHub Pages |
 | `deploy-vps-ssh.yml` | Manual | VPS deployment via SSH |
 | `deploy-imbra.yml` | Manual | Custom Imbra deployment |
 | `package-frontend.yml` | Manual | Frontend packaging |
+
+---
+
+## Vercel Deployment
+
+The frontend is configured for deployment on [Vercel](https://vercel.com).
+
+### Quick Start
+
+1. **Connect your repo** on [vercel.com/new](https://vercel.com/new) and import `bolo3547/denuelauto.shop`
+2. Vercel will auto-detect the `vercel.json` configuration:
+   - **Root Directory:** `frontend`
+   - **Framework:** Next.js
+   - **Build Command:** `npm run build`
+3. Set the required environment variable in the Vercel dashboard:
+   - `NEXT_PUBLIC_API_BASE_URL` → your backend API URL (e.g. `https://api.denuelauto.shop`)
+4. Click **Deploy**
+
+### CI/CD via GitHub Actions
+
+Automatic deployments are configured in `.github/workflows/deploy-vercel.yml`.
+
+To enable, add these GitHub repository secrets:
+- `VERCEL_TOKEN` — from [vercel.com/account/tokens](https://vercel.com/account/tokens)
+- `VERCEL_ORG_ID` — from `.vercel/project.json` after running `vercel link`
+- `VERCEL_PROJECT_ID` — from `.vercel/project.json` after running `vercel link`
+
+Every push to `main` that changes files in `frontend/` will auto-deploy to production.
 
 ---
 

@@ -1,0 +1,76 @@
+# =============================================================================
+# Vercel Deployment Workflow
+# =============================================================================
+# Deploys the Next.js frontend to Vercel.
+#
+# Setup instructions:
+#   1. Install the Vercel CLI: npm i -g vercel
+#   2. Link your project: cd frontend && vercel link
+#   3. Add the following secrets to your GitHub repository:
+#      - VERCEL_TOKEN: Your Vercel access token (vercel.com/account/tokens)
+#      - VERCEL_ORG_ID: Your Vercel team/org ID (from .vercel/project.json)
+#      - VERCEL_PROJECT_ID: Your Vercel project ID (from .vercel/project.json)
+#   4. (Optional) Set environment variables in the Vercel dashboard:
+#      - NEXT_PUBLIC_API_BASE_URL: Your backend API URL
+# =============================================================================
+
+name: Deploy to Vercel
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - 'vercel.json'
+      - '.github/workflows/deploy-vercel.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - preview
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy to Vercel
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Pull Vercel Environment
+        run: vercel pull --yes --environment=${{ github.event.inputs.environment || 'production' }} --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build Project
+        run: vercel build ${{ (github.event.inputs.environment == 'production' || github.ref == 'refs/heads/main') && '--prod' || '' }} --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy to Vercel
+        id: deploy
+        run: |
+          if [ "${{ github.event.inputs.environment }}" = "production" ] || [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            url=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }})
+          else
+            url=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
+          fi
+          echo "url=$url" >> $GITHUB_OUTPUT
+          echo "### Deployed to Vercel :rocket:" >> $GITHUB_STEP_SUMMARY
+          echo "**URL:** $url" >> $GITHUB_STEP_SUMMARY
