@@ -299,6 +299,7 @@ export async function updateApplicationStatus(
 
     // Send notification to applicant about status update
     try {
+      const { sendEmail } = await import('../utils/notifications');
       const fullApp = await prisma.financingApplication.findUnique({
         where: { id: applicationId },
         select: { buyerId: true, tenantId: true },
@@ -309,7 +310,6 @@ export async function updateApplicationStatus(
           select: { email: true },
         });
         if (buyer?.email) {
-          const { sendEmail } = require('../utils/notifications');
           await sendEmail(
             buyer.email,
             'Financing Application Update',

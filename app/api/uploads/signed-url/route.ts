@@ -33,8 +33,11 @@ export async function GET(req: NextRequest) {
     }, { status: 400 });
   }
 
-  // Sanitize filename and enforce tenant-specific prefix
-  const sanitizedFilename = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+  // Sanitize filename: strip path separators and special chars, allow only safe characters
+  const sanitizedFilename = filename
+    .replace(/\.\./g, '') // Prevent path traversal
+    .replace(/[/\\]/g, '') // Remove directory separators
+    .replace(/[^a-zA-Z0-9._-]/g, '_');
   const key = `uploads/${tenantId}/${Date.now()}-${sanitizedFilename}`;
 
   const s3Endpoint = process.env.S3_ENDPOINT || 'http://localhost:9000';

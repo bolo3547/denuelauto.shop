@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
             vin,
             make: result.Make,
             model: result.Model || 'Unknown',
-            year: parseInt(result.ModelYear) || null,
+            year: parseInt(result.ModelYear, 10) || null,
             bodyType: result.BodyClass || null,
             engineCc: result.DisplacementCC ? parseFloat(result.DisplacementCC) : null,
             fuelType: result.FuelTypePrimary || null,

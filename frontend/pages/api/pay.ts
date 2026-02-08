@@ -65,7 +65,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const data = await backendRes.json();
     return res.status(backendRes.status).json(data);
   } catch (error) {
-    console.error(`Payment proxy error for ${provider}:`, error);
+    console.error(`Payment proxy error for ${provider}:`, error instanceof Error ? error.message : 'Unknown error');
     return res.status(502).json({ error: 'Payment service unavailable' });
   }
 }

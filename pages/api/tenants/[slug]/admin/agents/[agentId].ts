@@ -162,7 +162,8 @@ async function handleGetAgent(req: AuthenticatedRequest, res: NextApiResponse, t
       assignedTimes[log.leadId] = log.createdAt;
     } else if (log.action === 'LEAD_CONTACTED' && assignedTimes[log.leadId]) {
       const diffMinutes = (log.createdAt.getTime() - assignedTimes[log.leadId].getTime()) / (1000 * 60);
-      if (diffMinutes >= 0 && diffMinutes < 43200) { // Only count if within 30 days
+      const THIRTY_DAYS_IN_MINUTES = 30 * 24 * 60; // 43200 minutes
+      if (diffMinutes >= 0 && diffMinutes < THIRTY_DAYS_IN_MINUTES) {
         totalResponseMinutes += diffMinutes;
         responseCount++;
       }

@@ -28,14 +28,13 @@ async function main() {
 
   // Create HQ SUPER_ADMIN user with password flagged to change on first login
   const defaultPassword = process.env.HQ_ADMIN_DEFAULT_PASSWORD || 'change-me-on-first-login';
-  const passwordHash = await (async () => {
-    try {
-      const bcryptModule = require('bcrypt');
-      return await bcryptModule.hash(defaultPassword, 10);
-    } catch {
-      return '$2b$10$PLACEHOLDER_HASH_INSTALL_BCRYPT';
-    }
-  })();
+  let passwordHash: string;
+  try {
+    const bcryptModule = await import('bcrypt');
+    passwordHash = await bcryptModule.default.hash(defaultPassword, 10);
+  } catch {
+    passwordHash = '$2b$10$PLACEHOLDER_HASH_INSTALL_BCRYPT';
+  }
 
   await prisma.admin_users.upsert({
     where: { email: superAdminEmail },
