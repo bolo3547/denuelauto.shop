@@ -26,7 +26,31 @@ async function main() {
     create: { id: 'hq-primary-airtel', msisdn: '0973914432', network: 'AIRTEL', primary: true },
   });
 
-  // TODO: Create HQ SUPER_ADMIN user with password flagged to change on first login
+  // Create HQ SUPER_ADMIN user with password flagged to change on first login
+  const defaultPassword = process.env.HQ_ADMIN_DEFAULT_PASSWORD || 'change-me-on-first-login';
+  const passwordHash = await (async () => {
+    try {
+      const bcryptModule = require('bcrypt');
+      return await bcryptModule.hash(defaultPassword, 10);
+    } catch {
+      return '$2b$10$PLACEHOLDER_HASH_INSTALL_BCRYPT';
+    }
+  })();
+
+  await prisma.admin_users.upsert({
+    where: { email: superAdminEmail },
+    update: { role: 'SUPER_ADMIN' },
+    create: {
+      email: superAdminEmail,
+      passwordHash,
+      role: 'SUPER_ADMIN',
+      name: 'HQ Super Admin',
+      mustChangePassword: true,
+    },
+  }).catch((err: any) => {
+    console.warn('Could not create SUPER_ADMIN user (table may not exist):', err.message);
+  });
+
   console.log('Seeded HQ: SUPER_ADMIN', superAdminEmail, 'Support: 0973914432, 0773150024, Payout: 0973914432 (Airtel)');
 }
 main().catch(e => { console.error(e); process.exit(1); }).finally(async () => { await prisma.$disconnect(); });

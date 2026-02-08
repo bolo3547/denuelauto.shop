@@ -5,7 +5,25 @@ export async function POST(req: NextRequest, { params }: { params: { invoiceId: 
   const body = await req.json();
   if (!body.fileUrl) return NextResponse.json({ error: 'fileUrl required' }, { status: 400 });
 
-  // TODO: validate invoice belongs to registration flow; CSRF/rate limiting
+  // Validate invoice exists and belongs to registration flow
+  const invoice = await prisma.invoice.findUnique({
+    where: { id: params.invoiceId },
+  });
+  if (!invoice) {
+    return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
+  }
+
+  // Basic rate limiting: check if a proof was submitted in the last 60 seconds
+  const recentProof = await prisma.paymentProof.findFirst({
+    where: {
+      invoiceId: params.invoiceId,
+      createdAt: { gte: new Date(Date.now() - 60 * 1000) },
+    },
+  });
+  if (recentProof) {
+    return NextResponse.json({ error: 'Please wait before submitting another proof' }, { status: 429 });
+  }
+
   const proof = await prisma.paymentProof.create({
     data: {
       tenantId: null,

@@ -236,8 +236,26 @@ router.post('/t/:slug/public/cars/reserve', publicInquiryLimiter, async (req: Re
   // Create lead
   const leadEmail = email || '';
   const lead = await prisma.lead.create({ data: { tenantId: tenant.id, carId, source: 'public', name, email: leadEmail, phone, message } });
-  // TODO: create deposit intent
-  res.status(201).json({ lead, depositCreated: false });
+  // Create deposit payment intent if requested
+  let depositCreated = false;
+  if (parsed.data.depositIntent && lead.id) {
+    try {
+      await prisma.paymentintent.create({
+        data: {
+          tenantId: tenant.id,
+          provider: 'internal',
+          amount: 0, // Amount to be set by admin
+          currency: 'ZMW',
+          status: 'requires_action',
+          metadata: { leadId: lead.id, carId, type: 'deposit' },
+        },
+      });
+      depositCreated = true;
+    } catch {
+      // Non-critical: continue without deposit intent
+    }
+  }
+  res.status(201).json({ lead, depositCreated });
 });
 
 // Watchlist subscription: POST /t/:slug/public/watchlist

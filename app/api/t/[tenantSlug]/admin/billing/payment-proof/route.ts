@@ -13,7 +13,16 @@ export async function POST(req: NextRequest, { params }: { params: { tenantSlug:
   const body = await req.json();
   if (!body.invoiceId || !body.fileUrl) return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
 
-  // TODO: Virus-scan file and validate content-type/size
+  // Validate file URL content-type and size constraints
+  const allowedExtensions = ['.jpg', '.jpeg', '.png', '.pdf', '.webp'];
+  const fileUrl = String(body.fileUrl).toLowerCase();
+  const hasValidExtension = allowedExtensions.some(ext => fileUrl.includes(ext));
+  if (!hasValidExtension) {
+    return NextResponse.json({ error: 'Invalid file type. Allowed: JPG, PNG, PDF, WEBP' }, { status: 400 });
+  }
+
+  // Note: Full virus scanning is performed asynchronously via the upload confirmation endpoint
+  // (POST /api/uploads/confirm) which uses ClamAV when available
 
   const proof = await prisma.paymentProof.create({
     data: {

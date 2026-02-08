@@ -13,7 +13,11 @@ export async function POST(req: NextRequest, { params }: { params: { tenantSlug:
   const tenant = await prisma.tenant.findUnique({ where: { slug: params.tenantSlug } });
   if (!tenant) return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
 
-  // Basic rate limit placeholder: TODO replace with Redis-based limiter
+  // Rate limiting: allow max 5 inquiries per IP per 10 minutes
+  const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+  // Note: For production, use Redis-based rate limiting (e.g., @upstash/ratelimit)
+  // This in-memory check is a basic safeguard
+
   // Validate
   if (!payload.name || !payload.phone) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
 

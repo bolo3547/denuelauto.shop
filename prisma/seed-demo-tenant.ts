@@ -30,7 +30,7 @@ async function main() {
   await prisma.agent.upsert({
     where: { tenantId_email: { tenantId: tenant.id, email: 'agent@demo.local' } },
     update: { name: 'Demo Agent' },
-    create: { tenantId: tenant.id, email: 'agent@demo.local', name: 'Demo Agent', passwordHash: 'TODO_HASH' },
+    create: { tenantId: tenant.id, email: 'agent@demo.local', name: 'Demo Agent', passwordHash: '$2b$10$DEMO_SEED_HASH_PLACEHOLDER_CHANGE_IN_PRODUCTION' },
   });
 
   await prisma.lead.create({
