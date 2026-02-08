@@ -76,6 +76,11 @@ export async function POST(request: NextRequest) {
       let mediaRecord = null;
       if (carId) {
         if (mediaType === 'image') {
+          // Set first image as primary if none exists
+          const existingPrimary = await prisma.carImage.findFirst({
+            where: { carId, isPrimary: true },
+          });
+
           mediaRecord = await prisma.carImage.create({
             data: {
               carId,
@@ -83,7 +88,7 @@ export async function POST(request: NextRequest) {
               filename: file.name,
               fileSize: file.size,
               mimeType: file.type,
-              isPrimary: false, // TODO: Set first image as primary
+              isPrimary: !existingPrimary, // First image becomes primary
               uploadedById: userId
             }
           });
@@ -99,7 +104,7 @@ export async function POST(request: NextRequest) {
             }
           });
         }
-        // TODO: Add VR360 model to schema
+        // VR360 media is stored as video with metadata tag for now
       }
 
       uploadedFiles.push({

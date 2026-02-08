@@ -1,7 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { requireTenantRole, AuthenticatedRequest, logAgentActivity } from '../../../../../middleware/tenantAuth';
+import { requireTenantRole, AuthenticatedRequest, logAgentActivity, autoAssignLead } from '../../../../../middleware/tenantAuth';
 import prisma from '../../../../../prismaClient';
 import { z } from 'zod';
+import { notifyAgent, NotificationTemplates } from '../../../../../notifications';
 
 const updateAgentSchema = z.object({
   name: z.string().min(1, 'Name is required').optional(),
@@ -127,14 +128,16 @@ async function handleGetAgent(req: AuthenticatedRequest, res: NextApiResponse, t
         assignedAt: { gte: sevenDaysAgo }
       }
     }),
-    // TODO: Calculate average response time from activity logs
-    prisma.agentActivityLog.aggregate({
+    // Calculate average response time from activity logs
+    // Measure time between LEAD_ASSIGNED and first LEAD_CONTACTED for each lead
+    prisma.agentActivityLog.findMany({
       where: {
         agentId,
-        action: 'LEAD_CONTACTED',
-        createdAt: { gte: thirtyDaysAgo }
+        action: { in: ['LEAD_ASSIGNED', 'LEAD_CONTACTED'] },
+        createdAt: { gte: thirtyDaysAgo },
       },
-      _count: { id: true }
+      orderBy: { createdAt: 'asc' },
+      select: { action: true, createdAt: true, leadId: true },
     }),
     prisma.appointment.count({
       where: {
@@ -146,6 +149,31 @@ async function handleGetAgent(req: AuthenticatedRequest, res: NextApiResponse, t
 
   const monthlyConversionRate = monthlyAssignments > 0 ? (monthlyConversions / monthlyAssignments) * 100 : 0;
   const weeklyConversionRate = weeklyAssignments > 0 ? (weeklyConversions / weeklyAssignments) * 100 : 0;
+
+  // Calculate average response time from activity logs
+  const responseTimeLogs = avgResponseTime as Array<{ action: string; createdAt: Date; leadId: string | null }>;
+  let totalResponseMinutes = 0;
+  let responseCount = 0;
+  const assignedTimes: Record<string, Date> = {};
+
+  for (const log of responseTimeLogs) {
+    if (!log.leadId) continue;
+    if (log.action === 'LEAD_ASSIGNED') {
+      assignedTimes[log.leadId] = log.createdAt;
+    } else if (log.action === 'LEAD_CONTACTED' && assignedTimes[log.leadId]) {
+      const diffMinutes = (log.createdAt.getTime() - assignedTimes[log.leadId].getTime()) / (1000 * 60);
+      const THIRTY_DAYS_IN_MINUTES = 30 * 24 * 60; // 43200 minutes
+      if (diffMinutes >= 0 && diffMinutes < THIRTY_DAYS_IN_MINUTES) {
+        totalResponseMinutes += diffMinutes;
+        responseCount++;
+      }
+      delete assignedTimes[log.leadId]; // Only count first response
+    }
+  }
+
+  const calculatedAvgResponseMinutes = responseCount > 0
+    ? Math.round(totalResponseMinutes / responseCount)
+    : 0;
 
   return res.status(200).json({
     agent: {
@@ -163,8 +191,8 @@ async function handleGetAgent(req: AuthenticatedRequest, res: NextApiResponse, t
           conversionRate: Math.round(weeklyConversionRate * 100) / 100
         },
         responseMetrics: {
-          avgResponseTimeMinutes: 0, // TODO: Calculate from activity logs
-          totalContacts: avgResponseTime._count.id
+          avgResponseTimeMinutes: calculatedAvgResponseMinutes,
+          totalContacts: responseCount
         }
       }
     }
@@ -228,7 +256,7 @@ async function handleUpdateAgent(req: AuthenticatedRequest, res: NextApiResponse
       { updatedFields: Object.keys(validatedData), updatedBy: req.user!.id }
     );
 
-    // TODO: If status changed to INACTIVE, reassign active leads
+    // If status changed to INACTIVE, reassign active leads
     if (validatedData.status === 'INACTIVE' && existingAgent.status === 'ACTIVE') {
       // Auto-reassign active leads to other agents
       const activeLeads = await prisma.lead.findMany({
@@ -239,14 +267,61 @@ async function handleUpdateAgent(req: AuthenticatedRequest, res: NextApiResponse
       });
 
       if (activeLeads.length > 0) {
-        // TODO: Implement lead reassignment logic
+        // Find available agents to reassign to (round-robin)
+        const availableAgents = await prisma.agent.findMany({
+          where: {
+            tenantId,
+            status: 'ACTIVE',
+            id: { not: agentId },
+          },
+          include: {
+            _count: {
+              select: { assignedLeads: { where: { status: { in: ['NEW', 'CONTACTED', 'INTERESTED'] } } } },
+            },
+          },
+          orderBy: { updatedAt: 'asc' },
+        });
+
+        // Reassign leads round-robin to available agents
+        for (let i = 0; i < activeLeads.length; i++) {
+          const lead = activeLeads[i];
+          if (availableAgents.length > 0) {
+            const targetAgent = availableAgents[i % availableAgents.length];
+            await prisma.lead.update({
+              where: { id: lead.id },
+              data: { agentId: targetAgent.id, assignedAt: new Date() },
+            });
+
+            // Notify the new agent
+            const notification = NotificationTemplates.leadReassigned(
+              lead.customerName,
+              existingAgent.name,
+              targetAgent.name
+            );
+            await notifyAgent(tenantId, targetAgent.id, notification.title, notification.message, {
+              leadId: lead.id,
+              reason: 'AGENT_DEACTIVATED',
+            });
+          } else {
+            // No available agents - unassign the lead
+            await prisma.lead.update({
+              where: { id: lead.id },
+              data: { agentId: null },
+            });
+          }
+        }
+
         await logAgentActivity(
           tenantId,
           agentId,
           'LEADS_REASSIGNED',
-          `${activeLeads.length} leads need reassignment due to agent deactivation`,
+          `${activeLeads.length} leads reassigned due to agent deactivation`,
           undefined,
-          { leadCount: activeLeads.length, reason: 'AGENT_DEACTIVATED' }
+          {
+            leadCount: activeLeads.length,
+            reason: 'AGENT_DEACTIVATED',
+            reassignedToAgents: availableAgents.map(a => a.id),
+          }
         );
       }
     }

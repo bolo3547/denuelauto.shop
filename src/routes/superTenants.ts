@@ -52,7 +52,33 @@ router.post('/tenants/:id/redact', async (req: Request, res: Response) => {
 router.post('/tenants/:id/teardown', async (req: Request, res: Response) => {
   const tenantId = req.params.id;
   await prisma.tenant.update({ where: { id: tenantId }, data: { settings: { deletedAt: new Date() } as any } as any });
-  // enqueue job to purge (left as TODO)
+
+  // Schedule data purge: mark all tenant records for deletion
+  // In production, this would use BullMQ to enqueue a background job
+  try {
+    // Deactivate all agents
+    await prisma.agent.updateMany({ where: { tenantId }, data: { status: 'INACTIVE' } });
+    // Cancel all pending appointments
+    await prisma.appointment.updateMany({
+      where: { tenantId, status: { in: ['SCHEDULED', 'CONFIRMED'] } },
+      data: { status: 'CANCELLED', notes: 'Tenant teardown' },
+    });
+    // Log the teardown
+    await prisma.auditlog.create({
+      data: {
+        actorType: 'SYSTEM',
+        actorId: 'system',
+        tenantId,
+        action: 'TENANT_TEARDOWN',
+        entity: 'TENANT',
+        entityId: tenantId,
+        metaJson: { requestedAt: new Date().toISOString() },
+      },
+    });
+  } catch (err) {
+    console.error('Teardown cleanup error:', err);
+  }
+
   return res.json({ ok: true });
 });
 

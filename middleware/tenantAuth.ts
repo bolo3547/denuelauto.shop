@@ -301,9 +301,32 @@ export async function autoAssignLead(leadId: string, tenantId: string): Promise<
       return null;
     }
 
-    // TODO: Implement skills-based matching
-    // For now, use simple round-robin
-    const selectedAgent = agents[0];
+    // Skills-based matching: prefer agents whose skills match the lead's interested car types
+    const lead = await prisma.lead.findUnique({
+      where: { id: leadId },
+      select: { interestedCarTypes: true, budget: true, source: true }
+    }).catch(() => null);
+
+    let selectedAgent = agents[0]; // Default: round-robin (lowest load)
+
+    if (lead?.interestedCarTypes && Array.isArray(lead.interestedCarTypes) && lead.interestedCarTypes.length > 0) {
+      // Score agents by how many of the lead's interested car types match their skills
+      const scoredAgents = agents.map(agent => {
+        const agentSkills = (agent.skills as string[] || []).map((s: string) => s.toLowerCase());
+        const matchCount = lead.interestedCarTypes.filter(
+          (carType: string) => agentSkills.some((skill: string) => skill.includes(carType.toLowerCase()) || carType.toLowerCase().includes(skill))
+        ).length;
+        return { agent, matchCount };
+      });
+
+      // Sort by match count (desc), then by load (asc)
+      scoredAgents.sort((a, b) => {
+        if (b.matchCount !== a.matchCount) return b.matchCount - a.matchCount;
+        return a.agent._count.assignedLeads - b.agent._count.assignedLeads;
+      });
+
+      selectedAgent = scoredAgents[0].agent;
+    }
 
     // Assign the lead
     await prisma.lead.update({

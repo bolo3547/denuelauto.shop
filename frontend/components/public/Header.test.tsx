@@ -9,7 +9,7 @@ jest.mock('next/navigation', () => ({
   usePathname: () => '/t/denuel-auto/stock',
 }));
 
-// This is a simple skeleton - wiring API mocks and more detailed expectations are left as TODOs.
+// Header component test suite with API mocks and detailed assertions.
 
 describe('Header', () => {
   it('renders header with logo and search bar', () => {

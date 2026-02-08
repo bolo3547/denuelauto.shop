@@ -76,8 +76,11 @@ export default function Header({ tenantSlug, initialTenant }: HeaderProps) {
   const onSearch = (q: string) => {
     // Compose redirect URL with current tenant slug and selected country/currency
     const url = `/t/${tenantSlug}/stock?query=${encodeURIComponent(q || '')}&country=${encodeURIComponent(country || '')}&currency=${encodeURIComponent(currency || '')}`;
-    // TODO: consider adding analytics event here (search term & filters)
-    // TODO: consider client-side routing with router.push to keep SPA navigation.
+    // Track search analytics event
+    if (typeof window !== 'undefined' && (window as any).gtag) {
+      (window as any).gtag('event', 'search_submit', { tenant_slug: tenantSlug, query: q, country, currency });
+    }
+    // Use client-side routing to keep SPA navigation
     router.push(url);
   };
 

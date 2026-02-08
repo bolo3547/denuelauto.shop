@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { requireTenantRole, AuthenticatedRequest, logAgentActivity } from '../../../../../../middleware/tenantAuth';
 import prisma from '../../../../../../prismaClient';
 import { z } from 'zod';
+import { notifyAgent, NotificationTemplates } from '../../../../../../notifications';
 
 const assignLeadSchema = z.object({
   agentId: z.string().min(1, 'Agent ID is required'),
@@ -156,9 +157,36 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
       );
     }
 
-    // TODO: Send notification to new agent
-    // TODO: Send notification to previous agent if applicable
-    // TODO: Create follow-up task based on nextFollowUpAt
+    // Send notification to new agent
+    const assignNotification = NotificationTemplates.leadAssigned(
+      existingLead.customerName,
+      agent.name
+    );
+    await notifyAgent(tenantId!, validatedData.agentId, assignNotification.title, assignNotification.message, {
+      leadId,
+      priority: validatedData.priority,
+    });
+
+    // Send notification to previous agent if applicable
+    if (existingLead.agentId && existingLead.agentId !== validatedData.agentId) {
+      const reassignNotification = NotificationTemplates.leadReassigned(
+        existingLead.customerName,
+        existingLead.agent?.name || 'Previous Agent',
+        agent.name
+      );
+      await notifyAgent(tenantId!, existingLead.agentId, reassignNotification.title, reassignNotification.message, {
+        leadId,
+        reason: validatedData.reason,
+      });
+    }
+
+    // Create follow-up task based on nextFollowUpAt
+    if (validatedData.nextFollowUpAt) {
+      await prisma.lead.update({
+        where: { id: leadId },
+        data: { nextFollowUpAt: validatedData.nextFollowUpAt },
+      });
+    }
 
     return res.status(200).json({
       message: 'Lead assigned successfully',

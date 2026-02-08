@@ -19,7 +19,13 @@ export default function TenantThemeProvider({ theme, children }: { theme?: Tenan
 
     // Additional tokens
     root.setProperty('--header-bg', 'var(--surface)');
-    // TODO: Consider using CSS variables for spacing and radius
+    // CSS variables for spacing and radius (used by components for consistent theming)
+    root.setProperty('--spacing-sm', '0.5rem');
+    root.setProperty('--spacing-md', '1rem');
+    root.setProperty('--spacing-lg', '1.5rem');
+    root.setProperty('--radius-sm', '0.25rem');
+    root.setProperty('--radius-md', '0.5rem');
+    root.setProperty('--radius-lg', '1rem');
     return () => {
       // cleanup: not strictly necessary
     };

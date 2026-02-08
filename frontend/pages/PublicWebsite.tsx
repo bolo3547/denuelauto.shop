@@ -523,8 +523,8 @@ export default function PublicWebsite({ tenantSlug }: PublicWebsiteProps) {
           setFavorites(prev => prev.filter(fav => fav.id !== carId));
         }}
         onCarClick={handleCarClick}
-        recentSearches={[]} // TODO: Implement recent searches
-        onClearRecentSearches={() => {}} // TODO: Implement clear recent searches
+        recentSearches={(() => { try { return JSON.parse(localStorage.getItem('recentSearches-public') || '[]'); } catch { return []; } })()}
+        onClearRecentSearches={() => { try { localStorage.removeItem('recentSearches-public'); } catch {} }}
       />
     );
   }

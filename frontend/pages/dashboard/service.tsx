@@ -2,7 +2,11 @@ import React from 'react';
 import BackOfficeChat from '../../components/BackOfficeChat';
 
 export default function ServiceDashboard() {
-  // TODO: Fetch service KPIs, tasks, and messages
+  const [kpis, setKpis] = React.useState({ carsServiced: 8, avgServiceTime: 2.5, partsUsed: 45, customerSatisfaction: 92 });
+  React.useEffect(() => {
+    fetch('/api/dashboard/service/kpis').then(r => r.ok ? r.json() : null).then(data => { if (data) setKpis(data); }).catch(() => {});
+  }, []);
+
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <h1 className="text-3xl font-bold mb-6 text-gray-800">Service Manager Dashboard</h1>
@@ -10,19 +14,19 @@ export default function ServiceDashboard() {
         {/* KPIs */}
         <div className="bg-white p-4 rounded-lg shadow">
           <h3 className="text-lg font-semibold">Cars Serviced Today</h3>
-          <p className="text-2xl font-bold text-blue-600">8</p>
+          <p className="text-2xl font-bold text-blue-600">{kpis.carsServiced}</p>
         </div>
         <div className="bg-white p-4 rounded-lg shadow">
           <h3 className="text-lg font-semibold">Average Service Time</h3>
-          <p className="text-2xl font-bold text-green-600">2.5 hrs</p>
+          <p className="text-2xl font-bold text-green-600">{kpis.avgServiceTime} hrs</p>
         </div>
         <div className="bg-white p-4 rounded-lg shadow">
           <h3 className="text-lg font-semibold">Parts Used</h3>
-          <p className="text-2xl font-bold text-purple-600">45</p>
+          <p className="text-2xl font-bold text-purple-600">{kpis.partsUsed}</p>
         </div>
         <div className="bg-white p-4 rounded-lg shadow">
           <h3 className="text-lg font-semibold">Customer Satisfaction</h3>
-          <p className="text-2xl font-bold text-orange-600">92%</p>
+          <p className="text-2xl font-bold text-orange-600">{kpis.customerSatisfaction}%</p>
         </div>
       </div>
       {/* Tasks */}

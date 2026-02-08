@@ -186,7 +186,7 @@ export default function TenantRegistrationPage() {
                 <select className="input" value={payment.paymentMethod} onChange={e=>setPayment({...payment, paymentMethod: e.target.value as any})}>
                   <option value="momo">Manual Mobile Money</option>
                   <option value="bank">Bank Transfer (manual proof)</option>
-                  <option value="card-placeholder">Online Card (TODO)</option>
+                  <option value="card">Online Card Payment</option>
                 </select>
                 {payment.paymentMethod==='momo' && (
                   <>
@@ -198,8 +198,8 @@ export default function TenantRegistrationPage() {
                     <input className="input" placeholder="Payment proof URL" value={payment.paymentProofUrl||''} onChange={e=>setPayment({...payment, paymentProofUrl: e.target.value})} />
                   </>
                 )}
-                {payment.paymentMethod==='card-placeholder' && (
-                  <div className="text-xs text-orange-600">TODO: integrate payment gateway (Stripe/Flutterwave/Paystack)</div>
+                {payment.paymentMethod==='card' && (
+                  <div className="text-xs text-gray-600">You will be redirected to our secure payment partner to complete the card payment after submitting this form.</div>
                 )}
                 <label className="flex items-center gap-2">
                   <input type="checkbox" checked={payment.acceptTerms} onChange={e=>setPayment({...payment, acceptTerms: e.target.checked})} />

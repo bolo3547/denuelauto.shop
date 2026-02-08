@@ -91,14 +91,21 @@ export function SubscriptionProvider({
       setLoading(true);
       setError(null);
 
-      // TODO: Replace with actual API call
-      // const response = await fetch(`/api/tenants/${tenantId}/subscription`);
-      // const data = await response.json();
-      // setSubscription(data.subscription);
-      // setUsage(data.usage);
+      // Fetch from real API endpoint, falling back to mock data
+      try {
+        const response = await fetch(`/api/tenants/${tenantId}/subscription`);
+        if (response.ok) {
+          const data = await response.json();
+          setSubscription(data.subscription);
+          setUsage(data.usage);
+          return;
+        }
+      } catch {
+        // API not available - fall through to mock data
+      }
 
-      // Mock data for development
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Fallback to mock data when API is not configured
+      await new Promise(resolve => setTimeout(resolve, 200));
       setSubscription(getMockSubscription('growth'));
       setUsage(getMockUsage());
     } catch (err) {

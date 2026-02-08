@@ -14,7 +14,7 @@ export default function VirtualTour({ car, onClose }: VirtualTourProps) {
   const [showVideo, setShowVideo] = useState(false);
 
   const images = car.images || ['/placeholder-car.jpg'];
-  const hasVideo = false; // TODO: Add videoUrl to DealerCar type when needed
+  const hasVideo = !!car.videoUrl;
 
   const nextImage = () => {
     setCurrentImageIndex((prev) => (prev + 1) % images.length);
@@ -84,7 +84,7 @@ export default function VirtualTour({ car, onClose }: VirtualTourProps) {
           {showVideo && hasVideo && (
             <div className="absolute inset-0 bg-black">
               <video
-                src="/placeholder-video.mp4" // TODO: Replace with car.videoUrl when available
+                src={car.videoUrl || ''}
                 controls
                 autoPlay
                 className="w-full h-full object-contain"

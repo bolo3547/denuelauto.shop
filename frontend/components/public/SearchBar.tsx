@@ -58,10 +58,9 @@ export default function SearchBar({ tenantSlug, defaultQuery = '', className = '
   }, [debounced, suggestions.length]);
 
   function onSelectSuggestion(s: AutocompleteSuggestion) {
-    // Note: we currently use suggestion label as search term; in future we might route directly.
-    const searchTerm = s.label;
+    // Sanitize suggestion label to prevent XSS from API-driven strings
+    const searchTerm = s.label.replace(/[<>"'&]/g, '');
     saveRecentSearch(tenantSlug, searchTerm);
-    // TODO: sanitize suggestion label before using (XSS risk from API-driven HTML/strings)
     redirectSearch(searchTerm);
   }
 
@@ -81,8 +80,12 @@ export default function SearchBar({ tenantSlug, defaultQuery = '', className = '
     // If the caller passed in country / currency, prefer those
     const c = country ?? localStorage.getItem(`tenant-country-${tenantSlug ?? 'global'}`) ?? 'US';
     const cur = currency ?? localStorage.getItem(`tenant-currency-${tenantSlug ?? 'global'}`) ?? 'USD';
-    // TODO: Consider encoding additional params for filters
-    router.push(`/t/${tenantSlug ?? 'denuel-auto'}/stock?query=${encodeURIComponent(term)}&country=${c}&currency=${cur}`);
+    const params = new URLSearchParams({
+      query: term,
+      country: c,
+      currency: cur,
+    });
+    router.push(`/t/${tenantSlug ?? 'denuel-auto'}/stock?${params.toString()}`);
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {

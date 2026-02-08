@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { requireTenantRole, AuthenticatedRequest, logAgentActivity } from '../../../../middleware/tenantAuth';
 import prisma from '../../../../prismaClient';
 import { z } from 'zod';
+import { notifyAgent, notifyCustomer, NotificationTemplates } from '../../../../notifications';
 
 // Validation schemas
 const createAppointmentSchema = z.object({
@@ -272,9 +273,24 @@ async function handleCreateAppointment(req: AuthenticatedRequest, res: NextApiRe
       });
     }
 
-    // TODO: Validate against agent working hours
-    // const dayOfWeek = appointmentStart.toLocaleDateString('en-US', { weekday: 'lowercase' });
-    // const workingHours = agent.workingHours?.[dayOfWeek];
+    // Validate against agent working hours
+    const appointmentDay = appointmentStart.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+    const workingHours = (agent.workingHours as Record<string, { start: string; end: string }> | null)?.[appointmentDay];
+    if (workingHours) {
+      const [startHour, startMin] = workingHours.start.split(':').map(Number);
+      const [endHour, endMin] = workingHours.end.split(':').map(Number);
+      const appointmentHour = appointmentStart.getHours();
+      const appointmentMin = appointmentStart.getMinutes();
+      const appointmentTimeVal = appointmentHour * 60 + appointmentMin;
+      const startTimeVal = startHour * 60 + startMin;
+      const endTimeVal = endHour * 60 + endMin;
+
+      if (appointmentTimeVal < startTimeVal || appointmentTimeVal >= endTimeVal) {
+        return res.status(400).json({
+          error: `Appointment time is outside agent's working hours on ${appointmentDay} (${workingHours.start} - ${workingHours.end})`,
+        });
+      }
+    }
 
     // Create the appointment
     const appointment = await prisma.appointment.create({
@@ -329,9 +345,46 @@ async function handleCreateAppointment(req: AuthenticatedRequest, res: NextApiRe
       });
     }
 
-    // TODO: Send confirmation emails to customer and agent
-    // TODO: Set up appointment reminders
-    // TODO: Add to agent's calendar
+    // Send confirmation emails to customer and agent
+    const formattedDate = appointmentStart.toLocaleString('en-US', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+    const confirmNotification = NotificationTemplates.appointmentConfirmation(
+      validatedData.type,
+      lead.customerName,
+      formattedDate,
+      validatedData.location
+    );
+
+    // Notify agent
+    await notifyAgent(tenantId, validatedData.agentId, confirmNotification.title, confirmNotification.message, {
+      appointmentId: appointment.id,
+      appointmentType: validatedData.type,
+    });
+
+    // Notify customer
+    if (lead.customerEmail) {
+      await notifyCustomer(lead.customerEmail, confirmNotification.title, confirmNotification.message);
+    }
+
+    // Set up appointment reminders via follow-up date
+    if (validatedData.reminderEnabled) {
+      const reminderTime = new Date(appointmentStart.getTime() - validatedData.reminderMinutes * 60 * 1000);
+      if (reminderTime > new Date()) {
+        await logAgentActivity(
+          tenantId,
+          validatedData.agentId,
+          'APPOINTMENT_REMINDER_SET',
+          `Reminder set for ${validatedData.reminderMinutes} minutes before appointment`,
+          validatedData.leadId,
+          {
+            appointmentId: appointment.id,
+            reminderAt: reminderTime.toISOString(),
+          }
+        );
+      }
+    }
 
     return res.status(201).json({
       appointment,

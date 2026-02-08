@@ -297,7 +297,29 @@ export async function updateApplicationStatus(
       }
     });
 
-    // TODO: Send notification to applicant
+    // Send notification to applicant about status update
+    try {
+      const { sendEmail } = await import('../utils/notifications');
+      const fullApp = await prisma.financingApplication.findUnique({
+        where: { id: applicationId },
+        select: { buyerId: true, tenantId: true },
+      });
+      if (fullApp?.buyerId) {
+        const buyer = await prisma.buyers.findUnique({
+          where: { id: fullApp.buyerId },
+          select: { email: true },
+        });
+        if (buyer?.email) {
+          await sendEmail(
+            buyer.email,
+            'Financing Application Update',
+            `<h2>Financing Application Update</h2><p>Your financing application has been updated to status: <strong>${status}</strong>.</p>${notes ? `<p>Notes: ${notes}</p>` : ''}`
+          );
+        }
+      }
+    } catch (notifyErr) {
+      console.error('Failed to notify applicant:', notifyErr);
+    }
 
     return { success: true, application };
   } catch (error: any) {

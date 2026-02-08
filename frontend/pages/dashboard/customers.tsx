@@ -67,21 +67,26 @@ export default function CustomerManagement() {
   }, []);
 
   const loadCars = async () => {
+    const fallbackCars = [
+      { id: '1', stockNo: 'CAR001', make: 'Toyota', model: 'Camry', year: 2020, priceUsd: 15000 },
+      { id: '2', stockNo: 'CAR002', make: 'Honda', model: 'Civic', year: 2019, priceUsd: 12000 }
+    ];
     try {
-      // TODO: Replace with actual API call
-      setCars([
-        { id: '1', stockNo: 'CAR001', make: 'Toyota', model: 'Camry', year: 2020, priceUsd: 15000 },
-        { id: '2', stockNo: 'CAR002', make: 'Honda', model: 'Civic', year: 2019, priceUsd: 12000 }
-      ]);
+      const res = await fetch('/api/cars');
+      if (res.ok) {
+        const data = await res.json();
+        setCars(data.cars || data || fallbackCars);
+      } else {
+        setCars(fallbackCars);
+      }
     } catch (error) {
       console.error('Failed to load cars:', error);
+      setCars(fallbackCars);
     }
   };
 
   const loadCustomers = async () => {
-    try {
-      // TODO: Replace with actual API call
-      const mockCustomers: Customer[] = [
+    const mockCustomers: Customer[] = [
         {
           id: '1',
           name: 'John Mwansa',
@@ -167,12 +172,22 @@ export default function CustomerManagement() {
           nextFollowUp: '2024-12-05T14:00:00Z'
         }
       ];
-      
-      setCustomers(mockCustomers);
-      setFilteredCustomers(mockCustomers);
+    try {
+      const res = await fetch('/api/customers');
+      if (res.ok) {
+        const data = await res.json();
+        const loaded = data.customers || data || mockCustomers;
+        setCustomers(loaded);
+        setFilteredCustomers(loaded);
+      } else {
+        setCustomers(mockCustomers);
+        setFilteredCustomers(mockCustomers);
+      }
       setLoading(false);
     } catch (error) {
       console.error('Failed to load customers:', error);
+      setCustomers(mockCustomers);
+      setFilteredCustomers(mockCustomers);
       setLoading(false);
     }
   };
@@ -233,14 +248,30 @@ export default function CustomerManagement() {
     setCustomers(customers.map(customer =>
       customer.id === customerId ? { ...customer, status: newStatus } : customer
     ));
-    // TODO: API call to update status
+    try {
+      await fetch(`/api/customers/${customerId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+    } catch (error) {
+      console.error('Failed to update customer status:', error);
+    }
   };
 
   const handleAssignCustomer = async (customerId: string, salesRep: string) => {
     setCustomers(customers.map(customer =>
       customer.id === customerId ? { ...customer, assignedTo: salesRep } : customer
     ));
-    // TODO: API call to assign customer
+    try {
+      await fetch(`/api/customers/${customerId}/assign`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assignedTo: salesRep })
+      });
+    } catch (error) {
+      console.error('Failed to assign customer:', error);
+    }
   };
 
   const viewCustomerDetail = (customer: Customer) => {
@@ -250,8 +281,16 @@ export default function CustomerManagement() {
 
   const handleSaveCustomer = async (customerData: any) => {
     try {
-      // TODO: Replace with actual API call
-      const newCustomer = {
+      const res = await fetch('/api/customers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(customerData)
+      });
+      let newCustomer;
+      if (res.ok) {
+        newCustomer = await res.json();
+      } else {
+        newCustomer = {
         id: `${Date.now()}`,
         ...customerData,
         inquiries: customerData.initialInquiry?.message ? [
@@ -267,7 +306,8 @@ export default function CustomerManagement() {
           }
         ] : [],
         createdAt: new Date().toISOString()
-      };
+        };
+      }
       
       setCustomers([newCustomer, ...customers]);
       setShowAddCustomer(false);
@@ -543,7 +583,8 @@ export default function CustomerManagement() {
                           </button>
                           <button
                             onClick={() => {
-                              // TODO: Edit customer
+                              setSelectedCustomer(customer);
+                              setShowCustomerDetail(true);
                             }}
                             className="text-green-600 hover:text-green-900"
                           >
@@ -623,13 +664,26 @@ function CustomerDetailModal({ customer, onClose, onUpdate }: CustomerDetailModa
 
   const addNote = () => {
     if (!newNote.trim()) return;
-    // TODO: Add note to customer
+    fetch(`/api/customers/${customer.id}/notes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ note: newNote })
+    }).catch(err => console.error('Failed to add note:', err));
+    onUpdate({ ...customer, notes: (customer.notes ? customer.notes + '\n' : '') + newNote });
     setNewNote('');
   };
 
   const respondToInquiry = (inquiryId: string) => {
     if (!newResponse.trim()) return;
-    // TODO: Add response to inquiry
+    fetch(`/api/customers/${customer.id}/inquiries/${inquiryId}/respond`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ response: newResponse })
+    }).catch(err => console.error('Failed to respond to inquiry:', err));
+    const updatedInquiries = customer.inquiries.map(inq =>
+      inq.id === inquiryId ? { ...inq, response: newResponse, respondedAt: new Date().toISOString(), status: 'RESPONDED' } : inq
+    );
+    onUpdate({ ...customer, inquiries: updatedInquiries });
     setNewResponse('');
     setSelectedInquiry('');
   };

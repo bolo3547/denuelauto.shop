@@ -1,0 +1,37 @@
+# Vercel ignore - exclude backend and infrastructure files
+# Only the frontend/ directory is deployed (set as rootDirectory in vercel.json)
+
+# Backend
+src/
+server/
+dist/
+prisma/
+middleware/
+notifications.ts
+prismaClient.ts
+
+# Infrastructure
+infra/
+scripts/
+docker-compose.yml
+Dockerfile
+
+# Deploy artifacts
+deploy-package/
+imbra-nodejs-deploy/
+*.zip
+*.tar.gz
+
+# Tests
+tests/
+e2e/
+*.test.ts
+*.test.tsx
+*.spec.ts
+
+# Documentation (not needed in deploy)
+docs/
+
+# Config files not needed in Vercel deploy
+.github/
+.vscode/

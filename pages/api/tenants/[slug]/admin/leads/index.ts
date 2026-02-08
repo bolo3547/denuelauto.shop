@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { requireTenantRole, AuthenticatedRequest, logAgentActivity, autoAssignLead } from '../../../../middleware/tenantAuth';
 import prisma from '../../../../prismaClient';
 import { z } from 'zod';
+import { notifyAgent, NotificationTemplates } from '../../../../notifications';
 
 // Validation schemas
 const createLeadSchema = z.object({
@@ -321,8 +322,33 @@ async function handleCreateLead(req: AuthenticatedRequest, res: NextApiResponse,
       }
     );
 
-    // TODO: Send notification to assigned agent
-    // TODO: Create follow-up tasks based on lead priority
+    // Send notification to assigned agent
+    if (assignedAgentId) {
+      const notification = NotificationTemplates.leadAssigned(
+        lead.customerName,
+        lead.agent?.name || 'Agent'
+      );
+      await notifyAgent(tenantId, assignedAgentId, notification.title, notification.message, {
+        leadId: lead.id,
+        source: lead.source,
+        priority: lead.priority,
+      });
+    }
+
+    // Create follow-up task based on lead priority
+    const followUpDelays: Record<string, number> = {
+      URGENT: 2 * 60 * 60 * 1000,      // 2 hours
+      HIGH: 4 * 60 * 60 * 1000,         // 4 hours
+      MEDIUM: 24 * 60 * 60 * 1000,      // 1 day
+      LOW: 3 * 24 * 60 * 60 * 1000,     // 3 days
+    };
+    const followUpDelay = followUpDelays[validatedData.priority] || followUpDelays.MEDIUM;
+    await prisma.lead.update({
+      where: { id: lead.id },
+      data: {
+        nextFollowUpAt: new Date(Date.now() + followUpDelay),
+      },
+    });
 
     return res.status(201).json({
       lead: {

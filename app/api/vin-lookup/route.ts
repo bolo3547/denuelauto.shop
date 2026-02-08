@@ -12,13 +12,35 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // TODO: Replace with actual VIN lookup service
-    // This could integrate with services like:
-    // - NHTSA VIN Decoder (free but limited)
-    // - AutoCheck/Carfax APIs
-    // - Third-party VIN services
-    
-    // Mock VIN decoding for demonstration
+    // Try NHTSA VIN Decoder API first (free, US-based)
+    try {
+      const nhtsaRes = await fetch(
+        `https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValues/${encodeURIComponent(vin)}?format=json`
+      );
+      if (nhtsaRes.ok) {
+        const nhtsaData = await nhtsaRes.json();
+        const result = nhtsaData?.Results?.[0];
+        if (result && result.Make && result.Make !== '') {
+          return NextResponse.json({
+            vin,
+            make: result.Make,
+            model: result.Model || 'Unknown',
+            year: parseInt(result.ModelYear, 10) || null,
+            bodyType: result.BodyClass || null,
+            engineCc: result.DisplacementCC ? parseFloat(result.DisplacementCC) : null,
+            fuelType: result.FuelTypePrimary || null,
+            transmission: result.TransmissionStyle || null,
+            drivetrain: result.DriveType || null,
+            confidence: 0.95,
+            source: 'NHTSA VIN Decoder',
+          });
+        }
+      }
+    } catch {
+      // NHTSA unavailable - fall through to local decoder
+    }
+
+    // Fallback to local VIN decoding
     const vinData = mockVinDecode(vin);
 
     if (!vinData) {

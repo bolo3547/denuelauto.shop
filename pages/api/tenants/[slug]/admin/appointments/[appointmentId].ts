@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { requireTenantRole, AuthenticatedRequest, logAgentActivity } from '../../../../../middleware/tenantAuth';
 import prisma from '../../../../../prismaClient';
 import { z } from 'zod';
+import { notifyAgent, notifyCustomer, NotificationTemplates } from '../../../../../notifications';
 
 const updateAppointmentSchema = z.object({
   scheduledAt: z.string().transform((str) => new Date(str)).optional(),
@@ -260,9 +261,39 @@ async function handleUpdateAppointment(req: AuthenticatedRequest, res: NextApiRe
       );
     }
 
-    // TODO: Send notifications based on changes
-    // TODO: Update calendar entries
-    // TODO: Send reminder updates if time changed
+    // Send notifications based on changes
+    if (changes.includes('status') && validatedData.status) {
+      const notification = validatedData.status === 'CANCELLED'
+        ? NotificationTemplates.appointmentCancelled(
+            existingAppointment.type,
+            existingAppointment.lead.customerName,
+            existingAppointment.scheduledAt.toLocaleString()
+          )
+        : NotificationTemplates.appointmentConfirmation(
+            existingAppointment.type,
+            existingAppointment.lead.customerName,
+            (validatedData.scheduledAt || existingAppointment.scheduledAt).toLocaleString(),
+            existingAppointment.location || ''
+          );
+      await notifyAgent(tenantId, existingAppointment.agentId, notification.title, notification.message);
+      if (existingAppointment.lead.customerEmail) {
+        await notifyCustomer(existingAppointment.lead.customerEmail, notification.title, notification.message);
+      }
+    }
+
+    // Send reminder updates if time changed
+    if (changes.includes('scheduledAt') && validatedData.scheduledAt) {
+      const notification = NotificationTemplates.appointmentRescheduled(
+        existingAppointment.type,
+        existingAppointment.lead.customerName,
+        existingAppointment.scheduledAt.toLocaleString(),
+        validatedData.scheduledAt.toLocaleString()
+      );
+      await notifyAgent(tenantId, existingAppointment.agentId, notification.title, notification.message);
+      if (existingAppointment.lead.customerEmail) {
+        await notifyCustomer(existingAppointment.lead.customerEmail, notification.title, notification.message);
+      }
+    }
 
     return res.status(200).json({ 
       appointment: updatedAppointment,
@@ -330,9 +361,23 @@ async function handleCancelAppointment(req: AuthenticatedRequest, res: NextApiRe
     }
   );
 
-  // TODO: Send cancellation notifications
-  // TODO: Free up agent's calendar
-  // TODO: Create follow-up task if needed
+  // Send cancellation notifications
+  const cancelNotification = NotificationTemplates.appointmentCancelled(
+    existingAppointment.type,
+    existingAppointment.lead.customerName,
+    existingAppointment.scheduledAt.toLocaleString()
+  );
+  await notifyAgent(tenantId, existingAppointment.agentId, cancelNotification.title, cancelNotification.message);
+
+  // Create follow-up task for cancelled appointments
+  await logAgentActivity(
+    tenantId,
+    existingAppointment.agentId,
+    'FOLLOW_UP_NEEDED',
+    `Follow-up needed: ${existingAppointment.type} appointment with ${existingAppointment.lead.customerName} was cancelled`,
+    existingAppointment.leadId,
+    { appointmentId, reason }
+  );
 
   return res.status(200).json({ 
     message: 'Appointment cancelled successfully',
@@ -370,11 +415,59 @@ async function handleAppointmentStatusChange(
       });
     }
 
-    // TODO: Create follow-up tasks based on outcome
-    // TODO: Update agent performance metrics
+    // Create follow-up tasks based on outcome
+    if (nextSteps) {
+      await logAgentActivity(
+        tenantId,
+        appointment.agentId,
+        'FOLLOW_UP_TASK_CREATED',
+        `Follow-up task created after ${appointment.type}: ${nextSteps}`,
+        appointment.leadId,
+        { appointmentId, outcome, nextSteps }
+      );
+    }
+
+    // Update agent performance metrics
+    await logAgentActivity(
+      tenantId,
+      appointment.agentId,
+      'APPOINTMENT_COMPLETED',
+      `Completed ${appointment.type} appointment with outcome: ${outcome || 'NEUTRAL'}`,
+      appointment.leadId,
+      { appointmentId, outcome, completedBy: userId }
+    );
   }
 
-  // TODO: Handle other status changes (CONFIRMED, NO_SHOW)
+  // Handle other status changes
+  if (newStatus === 'CONFIRMED') {
+    // Set a reminder for the confirmed appointment
+    await logAgentActivity(
+      tenantId,
+      appointment.agentId,
+      'APPOINTMENT_CONFIRMED',
+      `Appointment confirmed: ${appointment.type} with ${appointment.lead.customerName}`,
+      appointment.leadId,
+      { appointmentId }
+    );
+  } else if (newStatus === 'NO_SHOW') {
+    // Mark lead follow-up and log no-show
+    await prisma.lead.update({
+      where: { id: appointment.leadId },
+      data: {
+        nextFollowUpAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // Follow up next day
+        notes: `${appointment.lead.notes || ''}\nNo-show for ${appointment.type} on ${appointment.scheduledAt.toISOString()}`,
+      },
+    });
+
+    await logAgentActivity(
+      tenantId,
+      appointment.agentId,
+      'APPOINTMENT_NO_SHOW',
+      `No-show: ${appointment.type} with ${appointment.lead.customerName}`,
+      appointment.leadId,
+      { appointmentId }
+    );
+  }
 }
 
 function getPreparationChecklist(appointmentType: string, car: any): string[] {

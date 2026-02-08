@@ -2,17 +2,47 @@ import React, { useState, useEffect } from 'react';
 import { FaPaperPlane, FaSmile, FaUserCircle, FaCircle } from 'react-icons/fa';
 import { useSocket } from '../hooks/useSocket';
 
-// Mock users for demo - TODO: Fetch from API
-const users = [
+// Default users (used as fallback while API loads)
+const defaultUsers = [
   { id: 'staff1', name: 'John Doe', role: 'Sales Manager', avatar: '' },
   { id: 'staff2', name: 'Jane Smith', role: 'Technician', avatar: '' },
   { id: 'staff3', name: 'Mary Lee', role: 'Finance', avatar: '' },
 ];
 
 export default function BackOfficeChat({ currentUserId = 'staff1', tenantId = 'tenant-1' }) {
-  const [selectedUser, setSelectedUser] = useState(users[1]);
+  const [users, setUsers] = useState(defaultUsers);
+  const [selectedUser, setSelectedUser] = useState(defaultUsers[1]);
   const [input, setInput] = useState('');
   const { messages, sendMessage, isConnected, typingUsers, setTyping } = useSocket(currentUserId, tenantId);
+
+  // Fetch staff users from API
+  useEffect(() => {
+    async function fetchUsers() {
+      try {
+        const res = await fetch(`/api/tenants/${tenantId}/staff`);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.staff) && data.staff.length > 0) {
+            const staffList = data.staff
+              .filter((s: any) => s.id !== currentUserId)
+              .map((s: any) => ({
+                id: s.id,
+                name: s.name || s.email,
+                role: s.role || 'Staff',
+                avatar: s.avatar || '',
+              }));
+            if (staffList.length > 0) {
+              setUsers(staffList);
+              setSelectedUser(staffList[0]);
+            }
+          }
+        }
+      } catch {
+        // Keep default users on failure
+      }
+    }
+    fetchUsers();
+  }, [tenantId, currentUserId]);
 
   const handleSend = () => {
     if (!input.trim()) return;

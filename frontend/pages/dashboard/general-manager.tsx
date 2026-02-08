@@ -2,7 +2,11 @@ import React from 'react';
 import BackOfficeChat from '../../components/BackOfficeChat';
 
 export default function GeneralManagerDashboard() {
-  // TODO: Fetch KPIs, tasks, and messages
+  const [kpis, setKpis] = React.useState({ totalStaff: 48, monthlyRevenue: 2500000, carsSold: 120, serviceJobs: 85 });
+  React.useEffect(() => {
+    fetch('/api/dashboard/general-manager/kpis').then(r => r.ok ? r.json() : null).then(data => { if (data) setKpis(data); }).catch(() => {});
+  }, []);
+
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <h1 className="text-3xl font-bold mb-6 text-gray-800">General Manager Dashboard</h1>
@@ -10,19 +14,19 @@ export default function GeneralManagerDashboard() {
         {/* KPIs */}
         <div className="bg-white p-4 rounded-lg shadow">
           <h3 className="text-lg font-semibold">Total Staff</h3>
-          <p className="text-2xl font-bold text-blue-600">48</p>
+          <p className="text-2xl font-bold text-blue-600">{kpis.totalStaff}</p>
         </div>
         <div className="bg-white p-4 rounded-lg shadow">
           <h3 className="text-lg font-semibold">Monthly Revenue</h3>
-          <p className="text-2xl font-bold text-green-600">ZMW 2,500,000</p>
+          <p className="text-2xl font-bold text-green-600">ZMW {kpis.monthlyRevenue.toLocaleString()}</p>
         </div>
         <div className="bg-white p-4 rounded-lg shadow">
           <h3 className="text-lg font-semibold">Cars Sold</h3>
-          <p className="text-2xl font-bold text-purple-600">120</p>
+          <p className="text-2xl font-bold text-purple-600">{kpis.carsSold}</p>
         </div>
         <div className="bg-white p-4 rounded-lg shadow">
           <h3 className="text-lg font-semibold">Service Jobs</h3>
-          <p className="text-2xl font-bold text-orange-600">85</p>
+          <p className="text-2xl font-bold text-orange-600">{kpis.serviceJobs}</p>
         </div>
       </div>
       {/* Tasks */}
