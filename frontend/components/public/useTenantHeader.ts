@@ -1,5 +1,5 @@
 // Client-side hook to fetch tenant header information
-// This hook is intentionally lightweight and returns sample data if API is not configured.
+// This hook fetches from the real API endpoint and falls back to defaults on failure.
 
 import { useEffect, useState } from 'react';
 
@@ -20,7 +20,7 @@ export type TenantHeaderInfo = {
 };
 
 // NOTE: This is a client-side hook - it uses fetch and local state.
-// TODO: For production, call the real endpoint: /api/t/:tenantSlug/public/theme
+// Calls the real endpoint: /api/t/:tenantSlug/public/theme (with fallback defaults)
 export default function useTenantHeader(tenantSlug?: string, initialTenant?: TenantHeaderInfo) {
   const [tenant, setTenant] = useState<TenantHeaderInfo | null>(initialTenant ?? null);
   const [loading, setLoading] = useState<boolean>(!initialTenant);

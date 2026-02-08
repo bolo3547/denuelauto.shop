@@ -51,9 +51,8 @@ export function useAnalytics() {
         console.log('[Analytics]', payload);
       }
 
-      // Send to server (fire and forget)
+      // Send to server analytics endpoint (fire and forget)
       try {
-        // TODO: Replace with actual analytics endpoint
         fetch(`/api/t/${settings.tenantSlug}/analytics/track`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -62,13 +61,13 @@ export function useAnalytics() {
           // Silent fail - analytics should not break UX
         });
 
-        // TODO: Add GA4 integration
-        // if (typeof window !== 'undefined' && window.gtag) {
-        //   window.gtag('event', event, {
-        //     tenant_slug: settings.tenantSlug,
-        //     ...data,
-        //   });
-        // }
+        // GA4 integration: send events to Google Analytics if configured
+        if (typeof window !== 'undefined' && (window as any).gtag) {
+          (window as any).gtag('event', event, {
+            tenant_slug: settings.tenantSlug,
+            ...data,
+          });
+        }
       } catch {
         // Silent fail
       }

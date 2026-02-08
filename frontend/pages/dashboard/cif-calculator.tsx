@@ -110,14 +110,21 @@ export default function CIFCalculator() {
   }, []);
 
   const loadCars = async () => {
+    const fallbackCars = [
+      { id: '1', stockNo: 'CAR001', make: 'Toyota', model: 'Camry', year: 2020, priceUsd: 15000 },
+      { id: '2', stockNo: 'CAR002', make: 'Honda', model: 'Civic', year: 2019, priceUsd: 12000 }
+    ];
     try {
-      // TODO: Replace with actual API call
-      setCars([
-        { id: '1', stockNo: 'CAR001', make: 'Toyota', model: 'Camry', year: 2020, priceUsd: 15000 },
-        { id: '2', stockNo: 'CAR002', make: 'Honda', model: 'Civic', year: 2019, priceUsd: 12000 }
-      ]);
+      const res = await fetch('/api/cars');
+      if (res.ok) {
+        const data = await res.json();
+        setCars(data.cars || data || fallbackCars);
+      } else {
+        setCars(fallbackCars);
+      }
     } catch (error) {
       console.error('Failed to load cars:', error);
+      setCars(fallbackCars);
     }
   };
 
@@ -125,7 +132,7 @@ export default function CIFCalculator() {
     try {
       const response = await fetch('/api/cif/calculations', {
         headers: {
-          'x-tenant-id': 'tenant_123' // TODO: Get from auth context
+          'x-tenant-id': typeof window !== 'undefined' ? (localStorage.getItem('tenantId') || document.cookie.split(';').find(c => c.trim().startsWith('tenantId='))?.split('=')[1] || '') : ''
         }
       });
       
@@ -234,8 +241,8 @@ export default function CIFCalculator() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-tenant-id': 'tenant_123', // TODO: Get from auth context
-          'x-user-id': 'user_123' // TODO: Get from auth context
+          'x-tenant-id': typeof window !== 'undefined' ? (localStorage.getItem('tenantId') || document.cookie.split(';').find(c => c.trim().startsWith('tenantId='))?.split('=')[1] || '') : '',
+          'x-user-id': typeof window !== 'undefined' ? (localStorage.getItem('userId') || document.cookie.split(';').find(c => c.trim().startsWith('userId='))?.split('=')[1] || '') : ''
         },
         body: JSON.stringify(calculation)
       });

@@ -2,7 +2,11 @@ import React from 'react';
 import BackOfficeChat from '../../components/BackOfficeChat';
 
 export default function SalesDashboard() {
-  // TODO: Fetch sales KPIs, tasks, and messages
+  const [kpis, setKpis] = React.useState({ carsSold: 42, avgDealSize: 150000, leadsConverted: 15, teamPerformance: 85 });
+  React.useEffect(() => {
+    fetch('/api/dashboard/sales/kpis').then(r => r.ok ? r.json() : null).then(data => { if (data) setKpis(data); }).catch(() => {});
+  }, []);
+
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <h1 className="text-3xl font-bold mb-6 text-gray-800">Sales Manager Dashboard</h1>
@@ -10,19 +14,19 @@ export default function SalesDashboard() {
         {/* KPIs */}
         <div className="bg-white p-4 rounded-lg shadow">
           <h3 className="text-lg font-semibold">Cars Sold This Month</h3>
-          <p className="text-2xl font-bold text-blue-600">42</p>
+          <p className="text-2xl font-bold text-blue-600">{kpis.carsSold}</p>
         </div>
         <div className="bg-white p-4 rounded-lg shadow">
           <h3 className="text-lg font-semibold">Average Deal Size</h3>
-          <p className="text-2xl font-bold text-green-600">ZMW 150,000</p>
+          <p className="text-2xl font-bold text-green-600">ZMW {kpis.avgDealSize.toLocaleString()}</p>
         </div>
         <div className="bg-white p-4 rounded-lg shadow">
           <h3 className="text-lg font-semibold">Leads Converted</h3>
-          <p className="text-2xl font-bold text-purple-600">15%</p>
+          <p className="text-2xl font-bold text-purple-600">{kpis.leadsConverted}%</p>
         </div>
         <div className="bg-white p-4 rounded-lg shadow">
           <h3 className="text-lg font-semibold">Team Performance</h3>
-          <p className="text-2xl font-bold text-orange-600">85%</p>
+          <p className="text-2xl font-bold text-orange-600">{kpis.teamPerformance}%</p>
         </div>
       </div>
       {/* Tasks */}

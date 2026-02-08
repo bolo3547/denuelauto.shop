@@ -902,8 +902,18 @@ function BrandingEditor({ theme, onChange }: { theme: ThemeConfig; onChange: (pa
               accept="image/*"
               className="mt-2 text-sm"
               onChange={(e) => {
-                // TODO: Handle logo upload
-                console.log('Logo upload:', e.target.files);
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const formData = new FormData();
+                formData.append('logo', file);
+                fetch('/api/theme/logo', { method: 'POST', body: formData })
+                  .then(r => r.ok ? r.json() : null)
+                  .then(data => {
+                    if (data?.url) {
+                      setCurrentTheme(prev => ({ ...prev, branding: { ...prev.branding, logo: data.url } }));
+                    }
+                  })
+                  .catch(err => console.error('Logo upload failed:', err));
               }}
             />
           </div>

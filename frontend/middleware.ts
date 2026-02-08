@@ -18,24 +18,48 @@ const ROLE_DASHBOARD_MAP: Record<string, string> = {
   'OTHER': '/dashboard/general-manager'
 };
 
+/**
+ * Decode JWT payload without verification (Edge Runtime compatible).
+ * Full verification happens on the backend; this is for routing only.
+ */
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const decoded = atob(payload);
+    return JSON.parse(decoded);
+  } catch {
+    return null;
+  }
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
   // Only apply middleware to dashboard routes
   if (pathname === '/dashboard') {
-    // TODO: Get user role from JWT token or session
-    // For now, redirect to HR manager dashboard as example
-    const userRole = 'HR_MANAGER'; // This should come from auth
-    const dashboardPath = ROLE_DASHBOARD_MAP[userRole] || '/dashboard/general-manager';
+    // Get user role from JWT token in cookie or Authorization header
+    let userRole = 'GENERAL_MANAGER'; // fallback default
     
+    const token = request.cookies.get('token')?.value
+      || request.headers.get('authorization')?.replace('Bearer ', '');
+
+    if (token) {
+      const payload = decodeJwtPayload(token);
+      if (payload && typeof payload.role === 'string') {
+        userRole = payload.role;
+      }
+    }
+
+    const dashboardPath = ROLE_DASHBOARD_MAP[userRole] || '/dashboard/general-manager';
     return NextResponse.redirect(new URL(dashboardPath, request.url));
   }
   
-  // Protect API routes
+  // Protect API routes - require authorization header in all environments
   if (pathname.startsWith('/api/staff') || pathname.startsWith('/api/departments')) {
-    // TODO: Add proper JWT verification here
     const authHeader = request.headers.get('authorization');
-    if (!authHeader && !process.env.NODE_ENV?.includes('dev')) {
+    if (!authHeader) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
   }
