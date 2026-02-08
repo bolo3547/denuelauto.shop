@@ -18,6 +18,7 @@ export type DealerCar = {
   bodyType?: string;
   color?: string;
   images: string[];
+  videoUrl?: string;
   status: 'Available' | 'Reserved' | 'Sold';
   vin: string;
   inspectionReportUrl?: string;

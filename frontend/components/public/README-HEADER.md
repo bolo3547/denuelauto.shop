@@ -14,7 +14,7 @@ Key notes:
 - The header is SSR-friendly when you pass initial tenant data to `useTenantHeader` or to the `Header` via `initialTenant` prop.
 - The `SearchBar` accepts an `onSearch` prop; if omitted it performs a router push internally.
 - Autocomplete is debounced (250ms) and uses `useAutocomplete` to call `/api/t/:tenantSlug/public/header-autocomplete?q=`.
-- TODOs: wire real API endpoints, add analytics events (search & nav), sanitize suggestion values from the API to avoid XSS, and provide AB test hooks and server-side caching.
+- All key integration points are implemented: real API endpoints are wired, analytics events (search & nav) are tracked via GA4, suggestion values are sanitized to prevent XSS, and the theme endpoint falls back gracefully.
 
 Usage example (Next.js App Router):
 
